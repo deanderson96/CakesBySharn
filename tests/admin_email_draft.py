@@ -146,6 +146,13 @@ def test():
                     errors = []
                     page.on("pageerror", lambda error: errors.append(str(error)))
                     page.goto(url, wait_until="load")
+                    page.wait_for_timeout(1000)
+                    assert page.locator(".admin-record-summary").count() > 0, {
+                        "page_errors": errors,
+                        "status": page.locator("#admin-status").inner_text(),
+                        "mfa_visible": page.locator("#admin-mfa").is_visible(),
+                        "dashboard_visible": page.locator("#admin-dashboard").is_visible(),
+                    }
                     page.locator(".admin-record-summary").click()
                     link = page.get_by_role("link", name="Open order confirmation via Email")
                     link.wait_for(state="visible", timeout=15000)
