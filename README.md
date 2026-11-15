@@ -87,7 +87,7 @@ Browser automation is **not** a substitute for testing an actual email app on a 
 
 - `supabase/schema.sql`: private enquiries table with row-level security and no public read/write grants.
 - `supabase/functions/submit-enquiry/index.ts`: validates requests, creates a pending enquiry, sends Sharn an email and sends the customer an acknowledgement. This acknowledgement **does not confirm an order**.
-- `supabase/functions/manage-enquiries/index.ts`: authenticates Sharn's Supabase account, restricts access by `ADMIN_EMAIL`, lists private enquiries, sends standalone customer replies, and confirms/declines orders with an email to the customer.
+- `supabase/functions/manage-enquiries/index.ts`: authenticates individual Supabase accounts, restricts access by the private `admin_accounts` allowlist, lists private enquiries, sends standalone customer replies, and confirms/declines orders with an email to the customer.
 - `public.enquiry_replies`: private record of successful replies, visible to Sharn in the dashboard; sending a reply never changes an order's status.
 - `supabase/config.toml`: documents function JWT verification settings (public submission endpoint only).
 - `admin.html`: password-protected dashboard for Sharn to review enquiries, reply by email, and enter the actual total, date and collection/delivery time. Do not rely on the URL being secret.
@@ -138,3 +138,22 @@ Until a verified sending domain/provider is configured, the private admin UI use
 The current public online submission feature is deliberately **not activated** while email delivery and anti-bot protections are incomplete. The email/WhatsApp enquiry draft fallback remains available.
 
 **Security:** Keep the `ADMIN_EMAIL` secret set to the exact Sharn login email, disable public Auth sign-ups, and never expose service-role credentials. The admin function must not be considered operational until the admin Auth account and secret are configured and tested. Before production, add CAPTCHA/rate limiting, test the entire customer flow, and publish an approved privacy notice. For reliability at scale, move order creation to a transactional SQL function; the interim function attempts cleanup if the enquiry status update fails.
+
+## Multi-administrator accounts
+
+The admin portal supports multiple **individual** Supabase Auth email/password accounts with equal enquiry/order management permissions. It does **not** use one shared password, an email allowlist or user-editable metadata. Each request is checked server-side against the private `public.admin_accounts` allowlist using the authenticated user's immutable Auth UUID. Only accounts with `active = true` may use the management Edge Function. The public Data API has no direct grants on the private tables.
+
+**Provisioning (project owner only):**
+
+1. In Supabase Dashboard → Authentication → Users, invite or create each administrator using **their own** email address. They must confirm their email and set a strong password. Disable public sign-ups in Auth settings.
+2. Find the user's UUID in Authentication → Users, then in SQL Editor add an authorised administrator with:
+   ```sql
+   insert into public.admin_accounts (user_id, display_name)
+   values ('REPLACE-WITH-EXISTING-AUTH-USER-UUID', 'Administrator display name')
+   on conflict (user_id) do update set display_name = excluded.display_name, active = true;
+   ```
+   Never paste an actual password into SQL or GitHub. **Creating an Auth user alone does not grant admin access.**
+3. To revoke access immediately, set `active = false` for their UUID; to delete an account, remove the Auth user after revoking access and signing out sessions.
+4. Use `admin.html` for each administrator's own email/password sign-in. The server records `reviewed_by`, `approved_by`, `recorded_by`, and `customer_notified_by` Auth UUIDs on the relevant records.
+
+**Limitations:** No account invitation/management UI has been built; an authorised Supabase project owner must provision or revoke admin access. No real administrator has been added yet. The public online enquiry form remains disabled pending spam protection and acknowledgment delivery decisions.

@@ -31,6 +31,7 @@
     try {
       const data = await api({ action: 'list' });
       orders.replaceChildren();
+      const signedInAs = data.administrator || 'Administrator';
       const orderMap = new Map((data.orders || []).map(order => [order.enquiry_id, order]));
       for (const enquiry of data.enquiries) {
         const section = document.createElement('section');
@@ -163,7 +164,7 @@
         }
         orders.append(section);
       }
-      status.textContent = data.enquiries.length + ' enquiries loaded; ' + (data.orders || []).length + ' orders created.';
+      status.textContent = signedInAs + ': ' + data.enquiries.length + ' enquiries loaded; ' + (data.orders || []).length + ' orders created.';
     } catch (error) { status.textContent = error.message; }
   }
   document.querySelector('#login-form').addEventListener('submit', async event => {
