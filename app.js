@@ -217,10 +217,31 @@ function buildMessage() {
   const lines = ['Hi Sharn! I would like to enquire about an order.', ''];
   const entries = Object.entries(cart).filter(([key]) => ITEM_LOOKUP.has(key));
   if (entries.length) {
+    // A mailto draft is plain text. Keep the table narrow for mobile mail apps.
+    const itemWidth = 21;
+    const wrapLabel = (label) => {
+      const words = label.split(/\s+/);
+      const rows = [];
+      let line = '';
+      words.forEach(word => {
+        if (!line) line = word;
+        else if ((line + ' ' + word).length <= itemWidth) line += ' ' + word;
+        else { rows.push(line); line = word; }
+      });
+      if (line) rows.push(line);
+      return rows;
+    };
     lines.push('My choices:');
+    lines.push('Qty | ' + 'Item'.padEnd(itemWidth) + ' | Unit price');
+    lines.push('----+-' + '-'.repeat(itemWidth) + '-+------------');
     entries.forEach(([key, qty]) => {
       const item = ITEM_LOOKUP.get(key);
-      lines.push(`- ${qty} × ${item.name}${item.detail ? ` (${item.detail})` : ''} — ${priceText(item)}`);
+      const description = item.name + (item.detail ? ' (' + item.detail + ')' : '');
+      wrapLabel(description).forEach((part, index) => {
+        const quantity = index === 0 ? String(qty).padStart(3) : '   ';
+        const unitPrice = index === 0 ? priceText(item) : '';
+        lines.push(`${quantity} | ${part.padEnd(itemWidth)} | ${unitPrice}`);
+      });
     });
     lines.push('');
   }

@@ -60,7 +60,10 @@ def run():
                         query = parse_qs(address.query)
                         assert query.get("subject") == ["Cakes by Sharn - Order enquiry"], (engine, width, "wrong email subject")
                         email_body = query["body"][0]
-                        assert "Banana loaf" in email_body and "2 × Banana loaf" in email_body
+                        assert "Qty | Item" in email_body, (engine, width, "email table missing")
+                        assert "Unit price" in email_body, (engine, width, "email table price heading missing")
+                        assert "  2 | Banana loaf" in email_body, (engine, width, "email table quantity or item missing")
+                        assert "| £5.00" in email_body, (engine, width, "email table unit price missing")
                         assert "Estimated total" not in email_body, (engine, width, "total leaked into email")
                         assert "Estimate only" not in email_body, (engine, width, "pricing disclaimer leaked into email")
                         assert "Excludes items priced on request" not in email_body, (engine, width, "pricing caveat leaked into email")
