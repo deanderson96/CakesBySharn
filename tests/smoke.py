@@ -61,7 +61,9 @@ def run():
                         assert query.get("subject") == ["Cakes by Sharn - Order enquiry"], (engine, width, "wrong email subject")
                         email_body = query["body"][0]
                         assert "Banana loaf" in email_body and "2 × Banana loaf" in email_body
-                        assert "Estimated total: £10.00" in email_body
+                        assert "Estimated total" not in email_body, (engine, width, "total leaked into email")
+                        assert "Estimate only" not in email_body, (engine, width, "pricing disclaimer leaked into email")
+                        assert "Excludes items priced on request" not in email_body, (engine, width, "pricing caveat leaked into email")
                         assert "Name: Test customer" in email_body
                         assert "Chocolate drip cake with pink decoration" in email_body
                         assert page.evaluate("window.__emailWasBlocked") is False, (engine, width, "valid draft blocked")

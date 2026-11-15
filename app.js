@@ -222,13 +222,6 @@ function buildMessage() {
       const item = ITEM_LOOKUP.get(key);
       lines.push(`- ${qty} × ${item.name}${item.detail ? ` (${item.detail})` : ''} — ${priceText(item)}`);
     });
-    const priced = entries.filter(([key]) => ITEM_LOOKUP.get(key).priceType !== 'quote');
-    const estimate = priced.reduce((sum, [key, qty]) => sum + ITEM_LOOKUP.get(key).price * qty, 0);
-    const hasStarting = entries.some(([key]) => ITEM_LOOKUP.get(key).priceType === 'from');
-    const hasQuotes = entries.some(([key]) => ITEM_LOOKUP.get(key).priceType === 'quote');
-    lines.push(`${hasStarting ? 'Estimated total from' : 'Estimated total'}: ${formatter.format(estimate)}`);
-    if (hasQuotes) lines.push('Excludes items priced on request.');
-    lines.push('Estimate only — final pricing to be confirmed by Sharn.');
     lines.push('');
   }
   if (name) lines.push(`Name: ${name}`);
