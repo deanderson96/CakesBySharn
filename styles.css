@@ -364,3 +364,53 @@ h2 em { font-size: 1.08em; }
   .celebration-price span { border: 0; padding-left: 0; text-align: center; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *,*::before,*::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* Mobile enquiry: keep the panel within the visible viewport when the keyboard opens. */
+@media (max-width: 600px) {
+  html:has(.basket-drawer.open), body.drawer-open {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  .basket-drawer {
+    top: 0;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    height: var(--enquiry-viewport-height, 100dvh);
+    max-height: var(--enquiry-viewport-height, 100dvh);
+    min-height: 0;
+    transform: none;
+    opacity: 0;
+    transition: opacity .18s ease, visibility .18s ease;
+    box-shadow: none;
+    overflow: hidden;
+  }
+  .basket-drawer.open { transform: none; opacity: 1; }
+  .drawer-header {
+    flex: 0 0 auto;
+    padding: max(12px, env(safe-area-inset-top)) 18px 12px;
+  }
+  .drawer-header h2 { font-size: 26px; }
+  .drawer-close { flex-shrink: 0; width: 44px; height: 44px; }
+  .drawer-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-block: 12px 28px;
+    padding: 14px 18px max(28px, env(safe-area-inset-bottom));
+  }
+  .form-field input, .form-field textarea {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 16px; /* Prevents automatic iOS input zoom. */
+  }
+  .form-field textarea { resize: none; }
+  .drawer-socials { min-width: 0; }
+  .toast { bottom: 16px; }
+}

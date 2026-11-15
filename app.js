@@ -180,16 +180,44 @@ function updateQuantity(key, amount) {
   saveCart();
   renderBasket();
 }
+// On mobile, iOS/Android keyboards shrink the visual viewport without reliably
+// changing fixed-position element sizing. Match the drawer to that visible area.
+function syncEnquiryViewport() {
+  if (!drawer.classList.contains('open') || !window.matchMedia('(max-width: 600px)').matches) {
+    drawer.style.removeProperty('--enquiry-viewport-height');
+    return;
+  }
+  const viewport = window.visualViewport;
+  const height = viewport ? viewport.height : window.innerHeight;
+  drawer.style.setProperty('--enquiry-viewport-height', `${Math.round(height)}px`);
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', syncEnquiryViewport);
+  window.visualViewport.addEventListener('scroll', syncEnquiryViewport);
+}
+window.addEventListener('resize', syncEnquiryViewport);
+drawer.addEventListener('focusin', event => {
+  if (!event.target.matches('input, textarea')) return;
+  // Wait for the virtual keyboard to finish changing the viewport.
+  window.setTimeout(() => {
+    if (!drawer.classList.contains('open') || !drawer.contains(event.target)) return;
+    syncEnquiryViewport();
+    event.target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+  }, 250);
+});
+
 function openDrawer() {
   previousFocus = document.activeElement;
   backdrop.hidden = false;
   document.body.classList.add('drawer-open');
   drawer.setAttribute('aria-hidden', 'false');
+  syncEnquiryViewport();
   requestAnimationFrame(() => { backdrop.classList.add('visible'); drawer.classList.add('open'); });
   document.querySelector('#drawer-close').focus();
 }
 function closeDrawer() {
   drawer.classList.remove('open');
+  drawer.style.removeProperty('--enquiry-viewport-height');
   backdrop.classList.remove('visible');
   drawer.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('drawer-open');
