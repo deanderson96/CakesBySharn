@@ -1,4 +1,4 @@
-import { cors, respond, db } from '../_shared/common.ts';
+import { cors, respond } from '../_shared/common.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 Deno.serve(async request => {
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
@@ -9,7 +9,10 @@ Deno.serve(async request => {
     const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
     const { data: { user }, error } = await client.auth.getUser(bearer.slice(7));
     if (error || !user?.id || !user.email || !user.email_confirmed_at) return respond({ error: 'Not authorised' }, 403);
-    const database = db();
+    // All database operations use the caller's verified JWT. RLS checks active admin membership.
+    const database = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: bearer } }
+    });
     // A verified Supabase Auth session is necessary but not sufficient:
     // membership in this private, server-only allowlist is mandatory.
     const { data: administrator, error: adminError } = await database.from('admin_accounts')

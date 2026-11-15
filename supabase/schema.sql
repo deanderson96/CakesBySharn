@@ -74,3 +74,20 @@ alter table public.enquiry_replies add column if not exists recorded_by uuid ref
 alter table public.orders add column if not exists approved_by uuid references auth.users(id) on delete set null;
 alter table public.orders add column if not exists customer_notified_by uuid references auth.users(id) on delete set null;
 create index if not exists admin_accounts_active_idx on public.admin_accounts(active) where active = true;
+
+-- The management Edge Function uses the authenticated user's JWT and RLS.
+-- The allowlist is readable only by its own active member; anon has no grants.
+grant usage on schema public to authenticated;
+grant select on public.admin_accounts to authenticated;
+create policy "admins_read_own_membership" on public.admin_accounts for select to authenticated using (user_id = (select auth.uid()) and active = true);
+grant select, update on public.enquiries to authenticated;
+create policy "admins_read_enquiries" on public.enquiries for select to authenticated using (exists (select 1 from public.admin_accounts a where a.user_id = (select auth.uid()) and a.active));
+create policy "admins_update_enquiries" on public.enquiries for update to authenticated using (exists (select 1 from public.admin_accounts a where a.user_id = (select auth.uid()) and a.active)) with check (exists (select 1 from public.admin_accounts a where a.user_id = (select auth.uid()) and a.active));
+grant select, insert on public.enquiry_replies to authenticated;
+create policy "admins_read_replies" on public.enquiry_replies for select to authenticated using (exists (select 1 from public.admin_accounts a where a.user_id = (select auth.uid()) and a.active));
+create policy "admins_insert_replies" on public.enquiry_replies for insert to authenticated with check (recorded_by = (select auth.uid()) and exists (select 1 from public.admin_accounts a where a.user_id = (select auth.uid()) and a.active));
+grant select, insert, update, delete on public.orders to authenticated;
+create policy "admins_read_orders" on public.orders for select to authenticated using (exists (select 1 from public.admin_accounts a where a.user_id = (select auth.uid()) and a.active));
+create policy "admins_insert_orders" on public.orders for insert to authenticated with check (approved_by = (select auth.uid()) and exists (select 1 from public.admin_accounts a where a.user_id = (select auth.uid()) and a.active));
+create policy "admins_update_orders" on public.orders for update to authenticated using (exists (select 1 from public.admin_accounts a where a.user_id = (select auth.uid()) and a.active)) with check (exists (select 1 from public.admin_accounts a where a.user_id = (select auth.uid()) and a.active));
+create policy "admins_delete_orders" on public.orders for delete to authenticated using (exists (select 1 from public.admin_accounts a where a.user_id = (select auth.uid()) and a.active));
