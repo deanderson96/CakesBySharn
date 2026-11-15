@@ -36,7 +36,8 @@ def run():
                         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 2"), (engine, width, "horizontal overflow")
                         page.locator('[data-add="loaves:0"]').click()
                         page.locator('[data-add="loaves:0"]').click()
-                        assert page.locator("#basket-count").inner_text() == "2", (engine, width, "basket count")
+                        assert page.locator("#basket-count").text_content() == "2", (engine, width, "basket count")
+                        assert "£10.00" in page.locator("#basket-total").inner_text(), (engine, width, "estimated total")
                         page.locator("#basket-trigger").click()
                         assert "#enquiry" in page.url, (engine, width, "enquiry navigation")
                         page.locator("#customer-name").fill("Test customer")
@@ -44,8 +45,11 @@ def run():
                         page.locator("#copy-enquiry").click()
                         page.wait_for_function("Boolean(window.__lastCopied)")
                         assert "Banana loaf" in page.evaluate("window.__lastCopied")
+                        assert "Estimated total: £10.00" in page.evaluate("window.__lastCopied")
                         page.locator("#clear-enquiry").click()
-                        assert page.locator("#basket-count").inner_text() == "0"
+                        assert page.locator("#basket-count").text_content() == "0"
+                        assert page.locator("#basket-items .basket-empty").is_visible(), (engine, width, "items not cleared")
+                        assert page.locator("#basket-total").is_hidden(), (engine, width, "estimate not cleared")
                         assert page.locator("#customer-name").input_value() == ""
                         assert page.locator("#order-notes").input_value() == ""
                         page.locator("#copy-enquiry").click()
