@@ -11,7 +11,7 @@ A responsive, dependency-free website for **Cakes by Sharn**, based on the logo,
 - Menu filters and an interactive **order enquiry builder**
 - Editable quantities, optional customer details and a copy-to-clipboard enquiry
 - Direct links to Instagram and Facebook
-- Original supplied logo and menu for reference, plus original SVG illustrations
+- Brand logo and SVG illustrations, with menu items transcribed from the supplied menu
 - Basic SEO, Open Graph metadata, keyboard-friendly mobile navigation and enquiry drawer
 - No framework, accounts, dependencies, build step or server-side checkout required
 
@@ -29,21 +29,19 @@ Then visit `http://localhost:8000`.
 
 ## Publish on GitHub Pages
 
-This zip includes a full Git repository on the `main` branch. To upload it to your own GitHub account:
+This website is already stored in [deanderson96/CakesBySharn](https://github.com/deanderson96/CakesBySharn) on the `main` branch.
 
-1. Extract `cakes-by-sharn-git-repo.zip` and open a terminal inside the extracted `cakes-by-sharn` folder.
-2. On GitHub, create a new **empty** repository named `cakes-by-sharn` (do not initialize with a README or `.gitignore`).
-3. Connect the local repository to your new GitHub repository and push:
+To publish it, open **Settings → Pages → Build and deployment** in GitHub, select **Deploy from a branch**, choose `main` and `/ (root)`, then save. GitHub Pages will provide a public site URL after deployment.
+
+To work on the site locally, clone this repository:
 
 ```bash
-git remote add origin https://github.com/YOUR-USERNAME/cakes-by-sharn.git
-git push -u origin main
+git clone https://github.com/deanderson96/CakesBySharn.git
+cd CakesBySharn
+python3 -m http.server 8000
 ```
 
-4. On GitHub, go to **Settings → Pages → Build and deployment**. Choose **Deploy from a branch**, then select the `main` branch and `/ (root)` folder. Save.
-5. GitHub Pages will publish the static website. No build command is needed.
-
-Alternatively, upload the **contents** of the extracted directory (excluding `.git`) to a new GitHub repository using the GitHub web interface. The included Git history is preserved only with the terminal-based push.
+Visit `http://localhost:8000` to preview the site. No build tools are needed.
 
 ## Other hosts
 
@@ -61,7 +59,6 @@ Alternatively, upload the **contents** of the extracted directory (excluding `.g
 | Colours, fonts and layout | `styles.css` (`:root` variables at top) |
 | Brand logo | `assets/cakes-by-sharn-logo.jpg` |
 | Illustrations | `assets/*.svg` |
-| Original supplied menu | `assets/original-menu.jpg` (reference only) |
 
 Menu entries accept `priceType: 'fixed'`, `'from'` or `'quote'`:
 
@@ -75,7 +72,7 @@ The enquiry basket stores product selections in the customer's browser using `lo
 
 ## Before the public launch
 
-The attached source menu was supplied as an image and could be out of date. **Ask Sharn to confirm every price and product** before publishing. The site purposely does not invent an address, delivery area, food hygiene rating, opening hours, email, phone number or allergy assurances. Add these only after the business confirms them.
+The source menu was supplied as an image and could be out of date. **Ask Sharn to confirm every price and product** before publishing. The site purposely does not invent an address, delivery area, food hygiene rating, opening hours, email, phone number or allergy assurances. Add these only after the business confirms them.
 
 The site uses **illustrations, not photographs of Cakes by Sharn's products**. Replace or complement the artwork with the business's own cake photographs whenever they're available.
 
@@ -87,7 +84,6 @@ Fonts are requested from Google Fonts; the site includes system font fallbacks a
 
 ```text
 cakes-by-sharn/
-├── .git/                    # Initial Git history (included in repo ZIP)
 ├── .gitignore
 ├── index.html               # Content and accessible markup
 ├── styles.css               # Responsive site styles
@@ -96,7 +92,6 @@ cakes-by-sharn/
 ├── README.md
 └── assets/
     ├── cakes-by-sharn-logo.jpg
-    ├── original-menu.jpg
     ├── hero-cake.svg
     ├── celebration-cake.svg
     ├── afternoon-tea.svg

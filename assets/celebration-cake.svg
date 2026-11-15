@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 490">
+<ellipse cx="240" cy="437" rx="176" ry="20" fill="#0a747a" opacity=".17"/>
+<path d="M201 398h76l-14 28H218Z" fill="#c9e2d8"/>
+<ellipse cx="239" cy="429" rx="122" ry="12" fill="#fefcf3"/>
+<ellipse cx="239" cy="399" rx="177" ry="22" fill="#fffdf8" stroke="#d5e5db" stroke-width="5"/>
+<path d="M87 218h302v164q0 18-19 20H105q-19-2-18-20Z" fill="#f9d7d8" stroke="#eab5b5" stroke-width="5"/>
+<path d="M88 295q70 18 145 0t157 0M89 346q70 18 145 0t155 0" stroke="#fff4e4" stroke-width="14" fill="none"/>
+<path d="M87 221q0-35 35-36h231q36 0 37 36v27q-12 10-21-6-6-17-18 0-12 20-23 1-8-17-19 3-9 21-24 1-13-22-23-2-8 17-22 3-10-19-23-1-12 17-24-2-9-18-21 1-11 20-20 0-12-16-22 0-12 11-23-5Z" fill="#fff9f2" stroke="#edcfcc" stroke-width="4"/>
+<ellipse cx="239" cy="190" rx="151" ry="32" fill="#fffaf4" stroke="#edd6cf" stroke-width="4"/>
+<path d="M157 159q-8-30 18-39 24-7 32 17 14-29 38-13 15 11 10 30 26-34 52-11 11 10 5 26" fill="#fdf5ed" stroke="#eac9ca" stroke-width="5"/>
+<g fill="#f4b2ba" stroke="#d67f94" stroke-width="3"><circle cx="151" cy="187" r="18"/><circle cx="205" cy="179" r="17"/><circle cx="266" cy="181" r="17"/><circle cx="325" cy="187" r="18"/></g>
+<g fill="#ffebd1"><circle cx="151" cy="185" r="6"/><circle cx="205" cy="179" r="6"/><circle cx="266" cy="181" r="6"/><circle cx="325" cy="187" r="6"/></g>
+<path d="M192 134q-25-45-5-68 24-21 39 23Q237 48 259 63q19 15 7 63" fill="none" stroke="#eff3d9" stroke-width="12" stroke-linecap="round"/>
+<path d="M218 109c-22-27-19-54 1-59 22-5 31 24 20 49" fill="#f9d4d6" stroke="#eaa0af" stroke-width="4"/>
+<path d="M216 112q-6-22 5-29 15-1 13 18" fill="#fff1e9"/>
+<path d="M268 135q23-52 58-41-4 39-58 41Z" fill="#91c1a5"/>
+<path d="M178 138q-30-44-57-34 2 30 57 34Z" fill="#8cbf9d"/>
+<g fill="#ffe3ac"><circle cx="74" cy="120" r="6"/><circle cx="396" cy="116" r="5"/><circle cx="380" cy="295" r="5"/></g>
+<g stroke="#f9e5a4" stroke-width="5" stroke-linecap="round"><path d="M79 173v28m-14-14h28M403 191v22m-11-11h22M365 58v25m-12-12h24"/></g>
+</svg>

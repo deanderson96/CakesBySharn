@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" role="img" aria-label="Illustrated strawberry layer cake">
+<defs>
+  <linearGradient id="sponge" x1="0" y1="0" x2="1" y2=".3"><stop stop-color="#e1aa70"/><stop offset=".45" stop-color="#f7d6a5"/><stop offset="1" stop-color="#d99f69"/></linearGradient>
+  <linearGradient id="icing" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#fffdf9"/><stop offset="1" stop-color="#ffeded"/></linearGradient>
+  <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#c8e0d8"/></linearGradient>
+  <linearGradient id="berry" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fd7679"/><stop offset="1" stop-color="#d64652"/></linearGradient>
+  <filter id="shadow"><feGaussianBlur stdDeviation="11"/></filter>
+</defs>
+<ellipse cx="325" cy="558" rx="195" ry="27" fill="#739f90" opacity=".16" filter="url(#shadow)"/>
+<path d="M287 453h79l-17 81c11 7 42 11 67 16v14H237v-14c25-5 55-9 67-16Z" fill="#b7dad2" stroke="#7dbdb5" stroke-width="4"/>
+<path d="M293 465h68l-7 50h-55Z" fill="#e8faf3" opacity=".7"/>
+<ellipse cx="326" cy="553" rx="110" ry="14" fill="#f8fcf8" stroke="#91c2b7" stroke-width="3"/>
+<ellipse cx="326" cy="457" rx="214" ry="27" fill="url(#plate)" stroke="#91c7be" stroke-width="4"/>
+<ellipse cx="326" cy="453" rx="193" ry="18" fill="#fffdfa"/>
+<!-- Cake sponge -->
+<path d="M157 276 Q157 249 182 249 H465 Q487 249 487 275 V439 Q487 457 467 460 H179 Q157 457 157 439Z" fill="url(#sponge)" stroke="#c78c67" stroke-width="3"/>
+<path d="M160 309q157 14 325-2v25q-172 13-325 0Z" fill="#fff3df"/>
+<path d="M160 347q160 12 325-3v27q-167 12-325 0Z" fill="#f8e8de"/>
+<path d="M160 389q162 13 325-2v26q-174 11-325 0Z" fill="#fff2df"/>
+<path d="M164 330q160 10 318-1" fill="none" stroke="#e3a8a5" stroke-width="5" stroke-linecap="round"/>
+<path d="M164 372q163 10 318-2" fill="none" stroke="#e9bf9a" stroke-width="5" stroke-linecap="round"/>
+<path d="M166 414q164 11 314 0" fill="none" stroke="#e5acac" stroke-width="5" stroke-linecap="round"/>
+<path d="M186 281v158M463 283v160" stroke="#fff4e0" stroke-width="5" opacity=".42" stroke-linecap="round"/>
+<!-- Icing glaze drips -->
+<path d="M154 265 Q164 237 194 235 H453 Q482 236 493 264 V290 Q489 307 476 296 C462 289 461 265 447 274 C439 283 441 317 425 320 C408 321 414 278 394 279 C381 279 386 307 372 306 C359 304 357 282 346 280 C329 280 336 328 317 327 C300 326 306 274 290 274 C270 272 284 309 266 308 C252 307 259 282 244 276 C223 272 231 321 212 319 C198 318 202 285 189 278 C176 272 177 300 165 297 C150 295 149 279 154 265Z" fill="url(#icing)" stroke="#f4d9d3" stroke-width="3"/>
+<ellipse cx="324" cy="249" rx="170" ry="35" fill="#fffaf5" stroke="#f6dfd8" stroke-width="3"/>
+<!-- Piped icing swirls -->
+<g fill="#fff7ec" stroke="#efd2c9" stroke-width="2.5">
+<path d="M196 238c-18-9-7-30 7-25-2-11 15-19 23-7 14-7 24 11 12 21 10 12-8 24-21 14-12 15-28 7-21-3Z"/>
+<path d="M400 224c-10-14 9-26 20-17 2-15 25-13 24 2 19-1 21 19 5 25 8 17-14 22-22 10-13 12-32-2-27-20Z"/>
+<path d="M295 211c-11-16 9-27 20-16 3-15 24-11 25 4 19 0 20 19 4 25 5 17-15 23-24 10-15 12-31-4-25-23Z"/>
+</g>
+<!-- Strawberries and leaves -->
+<g transform="translate(317 181) rotate(13)">
+<path d="M-24 0 C-37 16-17 52 0 58 C18 52 37 17 23 0Z" fill="url(#berry)" stroke="#bf4754" stroke-width="3"/>
+<path d="M-22 3-7 11 0-3 8 11 23 3 12-8 0-3-13-10Z" fill="#4b9975"/>
+<path d="M0-5 3-18" stroke="#38795c" stroke-width="4" stroke-linecap="round"/>
+<g fill="#ffcb9d"><ellipse cx="-13" cy="19" rx="2" ry="3"/><ellipse cx="11" cy="18" rx="2" ry="3"/><ellipse cx="1" cy="29" rx="2" ry="3"/><ellipse cx="-7" cy="41" rx="2" ry="3"/><ellipse cx="9" cy="40" rx="2" ry="3"/></g>
+</g>
+<g transform="translate(381 202) rotate(37) scale(.73)"><path d="M-24 0 C-37 16-17 52 0 58 C18 52 37 17 23 0Z" fill="url(#berry)" stroke="#bf4754" stroke-width="3"/><path d="M-22 3-7 11 0-3 8 11 23 3 12-8 0-3-13-10Z" fill="#4b9975"/><g fill="#ffcb9d"><circle cx="-8" cy="19" r="2"/><circle cx="9" cy="25" r="2"/><circle cy="40" r="2"/></g></g>
+<g transform="translate(244 205) rotate(-25) scale(.65)"><path d="M-24 0 C-37 16-17 52 0 58 C18 52 37 17 23 0Z" fill="url(#berry)" stroke="#bf4754" stroke-width="3"/><path d="M-22 3-7 11 0-3 8 11 23 3 12-8 0-3-13-10Z" fill="#4b9975"/><g fill="#ffcb9d"><circle cx="-8" cy="19" r="2"/><circle cx="9" cy="25" r="2"/><circle cy="40" r="2"/></g></g>
+<!-- Little leaf accents -->
+<path d="M429 218 Q451 186 476 192 Q469 217 429 218Z" fill="#69a68a" stroke="#4e9076" stroke-width="2"/>
+<path d="M213 219 Q192 187 163 196 Q176 221 213 219Z" fill="#85b69c" stroke="#4e9076" stroke-width="2"/>
+<!-- Decorative motes -->
+<g stroke="#c78383" stroke-width="3" stroke-linecap="round"><path d="M122 185v15m-8-8h16M506 350v14m-7-7h14"/><path d="M508 177v17m-8-8h16"/></g>
+<g fill="#d6a66c"><circle cx="134" cy="350" r="5"/><circle cx="514" cy="253" r="5"/><circle cx="150" cy="418" r="3"/></g>
+</svg>
