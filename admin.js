@@ -18,6 +18,11 @@
     if (!res.ok) throw Error(json.error || 'Request failed');
     return json;
   }
+  function emailDraftHref(recipient, subject, body) {
+    // mailto bodies use CRLF line endings, encoded as %0D%0A.
+    const message = body.replace(/\r?\n/g, '\r\n');
+    return 'mailto:' + encodeURIComponent(recipient) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(message);
+  }
   function field(label, type, required = true) {
     const wrap = document.createElement('label');
     wrap.textContent = label + ' ';
@@ -83,8 +88,8 @@
           event.preventDefault();
           if (!replyForm.reportValidity()) return;
           const subject = 'Cakes by Sharn enquiry ' + enquiry.reference;
-          const body = 'Hello ' + enquiry.customer_name + ',\\n\\n' + replyText.value.trim() + '\\n\\nReference: ' + enquiry.reference + '\\nCakes by Sharn';
-          window.location.href = 'mailto:' + encodeURIComponent(enquiry.customer_email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+          const body = 'Hello ' + enquiry.customer_name + ',\n\n' + replyText.value.trim() + '\n\nReference: ' + enquiry.reference + '\nCakes by Sharn';
+          window.location.href = emailDraftHref(enquiry.customer_email, subject, body);
           status.textContent = 'Email draft opened. Send it from Hotmail, then record the reply if sent.';
         });
         const logReply = document.createElement('button');
@@ -105,14 +110,29 @@
           const orderInfo = document.createElement('p');
           orderInfo.textContent = 'ORDER CREATED: ' + existingOrder.order_reference + ' — £' + (existingOrder.total_pence / 100).toFixed(2) + ' — ' + existingOrder.agreed_date + ' (' + existingOrder.agreed_time + ').';
           section.append(orderInfo);
-          const orderMessage = 'Hello ' + enquiry.customer_name + ',\\n\\nYour Cakes by Sharn order has been created and approved.\\nOrder reference: ' + existingOrder.order_reference +
-            '\\nEnquiry reference: ' + enquiry.reference + '\\nItems: ' + enquiry.items.map(i => i.quantity + ' × ' + i.name).join('; ') +
-            '\\nTotal: £' + (existingOrder.total_pence / 100).toFixed(2) + '\\n' + (existingOrder.fulfilment === 'delivery' ? 'Delivery' : 'Collection') +
-            ': ' + existingOrder.agreed_date + ' — ' + existingOrder.agreed_time + '\\nNotes: ' + existingOrder.notes + '\\n\\nCakes by Sharn';
+          const orderItems = enquiry.items.map(i => '- ' + i.quantity + ' × ' + i.name);
+          const orderMessage = [
+            'Hello ' + enquiry.customer_name + ',',
+            '',
+            'Your Cakes by Sharn order has been created and approved.',
+            '',
+            'Order reference: ' + existingOrder.order_reference,
+            'Enquiry reference: ' + enquiry.reference,
+            '',
+            'Items:',
+            ...(orderItems.length ? orderItems : ['Custom request']),
+            '',
+            'Total: £' + (existingOrder.total_pence / 100).toFixed(2),
+            (existingOrder.fulfilment === 'delivery' ? 'Delivery' : 'Collection') +
+              ': ' + existingOrder.agreed_date + ' — ' + existingOrder.agreed_time,
+            ...(existingOrder.notes ? ['', 'Notes: ' + existingOrder.notes] : []),
+            '',
+            'Cakes by Sharn'
+          ].join('\n');
           const notifyLink = document.createElement('a');
           notifyLink.className = 'button button-outline';
           notifyLink.textContent = 'Open order confirmation email';
-          notifyLink.href = 'mailto:' + encodeURIComponent(enquiry.customer_email) + '?subject=' + encodeURIComponent('Cakes by Sharn — order ' + existingOrder.order_reference) + '&body=' + encodeURIComponent(orderMessage);
+          notifyLink.href = emailDraftHref(enquiry.customer_email, 'Cakes by Sharn — order ' + existingOrder.order_reference, orderMessage);
           section.append(notifyLink);
           const notified = document.createElement('p');
           notified.textContent = existingOrder.customer_notified_at ? 'Customer notification recorded: ' + new Date(existingOrder.customer_notified_at).toLocaleString('en-GB') + ' (' + existingOrder.notification_method + ')' : 'Customer has not yet been marked notified.';

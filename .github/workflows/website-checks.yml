@@ -17,6 +17,8 @@ jobs:
           python -m playwright install --with-deps chromium webkit
       - name: Run responsive browser checks
         run: python tests/smoke.py
+      - name: Check admin email draft formatting
+        run: python tests/admin_email_draft.py
 
   live-enquiry-check:
     if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[live-enquiry-test]') }}
