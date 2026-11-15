@@ -14,6 +14,10 @@ FAKE_SUPABASE_MODULE = """
 export function createClient() {
   return {
     auth: {
+      mfa: {
+        getAuthenticatorAssuranceLevel: async () => ({data:{currentLevel:'aal2',nextLevel:'aal2'},error:null}),
+        listFactors: async () => ({data:{totp:[]},error:null})
+      },
       getSession: async () => ({data: {session: {access_token: 'test-token'}}}),
       signInWithPassword: async () => ({error: null}),
       signOut: async () => ({error: null}),
@@ -24,6 +28,9 @@ export function createClient() {
 
 FAKE_LIST = {
     "administrator": "Test Administrator",
+    "adminRole": "operator",
+    "total": 1,
+    "counts": {"pending":0,"confirmed":1,"declined":0},
     "enquiries": [{
         "id": TEST_ID,
         "reference": "CBS-1234567890",
@@ -42,6 +49,8 @@ FAKE_LIST = {
         "replies": [],
     }],
     "orders": [{
+        "id":"22222222-2222-4222-8222-222222222222",
+        "status":"approved",
         "enquiry_id": TEST_ID,
         "order_reference": "CBS-ORD-1234567890",
         "total_pence": 2150,

@@ -110,7 +110,11 @@
   const sessionActions = document.querySelector('#admin-session-actions');
   let records = [];
   let orderMap = new Map();
-  let administrator = 'Administrator';
+  let administrator='Administrator';
+  let adminRole='operator';
+  let pageOffset=0,matchingTotal=0;
+  let pageCounts={pending:0,confirmed:0,declined:0};
+  const pageSize=25;
   function el(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -285,6 +289,8 @@
       const orderInfo = el('div', 'admin-detail-grid');
       orderInfo.append(
         detailLine('Order reference', order.order_reference),
+        detailLine('Order status',order.status==='cancelled'?'Cancelled':
+          order.status==='completed'?'Completed':'Approved'),
         detailLine('Agreed total', '£' + (order.total_pence / 100).toFixed(2)),
         detailLine('Agreed date', formatDate(order.agreed_date)),
         detailLine('Agreed time', order.agreed_time),
@@ -322,7 +328,31 @@
         });
         actions.append(notified);
       }
-      box.append(actions); panel.append(box);
+      if (!order.status||order.status==='approved'){
+        const complete=el('button','button button-primary','Mark completed');
+        complete.type='button';
+        complete.addEventListener('click',async()=>{
+          if(!window.confirm('Mark this approved order as completed?'))return;
+          complete.disabled=true;
+          try{await api({action:'set-order-status',id:order.id,orderStatus:'completed'});await refresh();}
+          catch(error){status.textContent=error.message;complete.disabled=false;}
+        });
+        const cancel=el('button','button button-outline','Cancel order');
+        cancel.type='button';
+        cancel.addEventListener('click',async()=>{
+          const reason=window.prompt('Reason for cancelling this approved order:');
+          if(reason===null)return;
+          if(reason.trim().length<5||reason.length>500){status.textContent='Enter a reason of 5 to 500 characters.';return;}
+          if(!window.confirm('Cancel the order? Its records will be preserved for accounting and audit.'))return;
+          cancel.disabled=true;
+          try{await api({action:'set-order-status',id:order.id,orderStatus:'cancelled',reason:reason.trim()});await refresh();}
+          catch(error){status.textContent=error.message;cancel.disabled=false;}
+        });
+        actions.append(complete,cancel);
+      }
+      if(order.status==='cancelled'&&order.cancellation_reason)
+        box.append(detailLine('Cancellation reason',order.cancellation_reason));
+      box.append(actions);panel.append(box);
     }
     if (enquiry.status === 'pending') {
       const actionBox = el('div', 'admin-detail-section admin-decision-section');
@@ -361,16 +391,17 @@
     details.append(panel);
     return details;
   }
-  function renderRecords() {
-    const term = search.value.trim().toLowerCase();
-    const selected = filter.value;
+  function renderRecords(){
     orders.replaceChildren();
-    const matching = records.filter(enquiry => (selected === 'all' || enquiry.status === selected) &&
-      [enquiry.customer_name, enquiry.reference, enquiry.customer_email, enquiry.customer_mobile, enquiry.items.map(i => i.name).join(' ')]
-        .some(value => String(value || '').toLowerCase().includes(term)));
-    matching.forEach(enquiry => orders.append(renderRecord(enquiry)));
-    empty.hidden = matching.length > 0;
-    document.querySelector('#admin-list-caption').textContent = matching.length + ' of ' + records.length + ' enquiries · Select a row to see details and actions';
+    records.forEach(enquiry=>orders.append(renderRecord(enquiry)));
+    empty.hidden=records.length>0;
+    document.querySelector('#admin-list-caption').textContent=matchingTotal+
+      ' matching enquiries · Select a row for details and actions';
+    document.querySelector('#admin-pagination').hidden=matchingTotal<=pageSize;
+    document.querySelector('#admin-prev-page').disabled=pageOffset===0;
+    document.querySelector('#admin-next-page').disabled=pageOffset+records.length>=matchingTotal;
+    document.querySelector('#admin-page-label').textContent=matchingTotal?
+      (pageOffset+1)+'–'+(pageOffset+records.length)+' of '+matchingTotal:'No matching enquiries';
   }
   const analyticsCards = document.querySelector('#admin-analytics-cards');
   const activityChart = document.querySelector('#admin-activity-chart');
@@ -431,28 +462,72 @@
     });
     activityChart.setAttribute('aria-label',months.map(item => item.month + ': ' + item.enquiries + ' enquiries and ' + item.orders + ' orders').join('; '));
   }
-  function renderMetrics() {
-    const stats = [
-      ['Total enquiries',records.length,'all'],
-      ['Awaiting review',records.filter(e => e.status === 'pending').length,'pending'],
-      ['Approved orders',records.filter(e => e.status === 'confirmed').length,'confirmed'],
-      ['Declined',records.filter(e => e.status === 'declined').length,'declined']
+  function renderMetrics(){
+    const stats=[
+      ['Matching enquiries',matchingTotal,'all'],
+      ['Awaiting review',pageCounts.pending,'pending'],
+      ['Approved enquiries',pageCounts.confirmed,'confirmed'],
+      ['Declined enquiries',pageCounts.declined,'declined']
     ];
     metrics.replaceChildren();
-    stats.forEach(([label,value,target]) => {
-      const tile = el('button','admin-metric');
-      tile.type = 'button';
+    stats.forEach(([label,value,target])=>{
+      const tile=el('button','admin-metric');
+      tile.type='button';
       tile.append(el('span','admin-metric-label',label),el('strong','admin-metric-value',String(value)));
-      tile.addEventListener('click', () => { filter.value=target; renderRecords(); });
+      tile.addEventListener('click',()=>{filter.value=target;pageOffset=0;refresh();});
       metrics.append(tile);
     });
   }
+  const ownerPanel=document.querySelector('#admin-owner-panel');
+  const userList=document.querySelector('#admin-user-list');
+  const auditList=document.querySelector('#admin-audit-list');
+  async function refreshOwner(){
+    if(adminRole!=='owner')return;
+    try{
+      const [accounts,history]=await Promise.all([
+        api({action:'owner-admins'}),api({action:'owner-audit'})
+      ]);
+      userList.replaceChildren();
+      (accounts.admins||[]).forEach(account=>{
+        const row=el('div','admin-owner-row'),identity=el('div','');
+        identity.append(el('strong','',account.display_name+' · '+account.role),
+          el('small','',account.email+' · '+(account.active?'Active':'Disabled')));
+        row.append(identity);
+        if(account.role!=='owner'){
+          const button=el('button','button button-outline',account.active?'Disable access':'Enable access');
+          button.type='button';
+          button.addEventListener('click',async()=>{
+            if(!window.confirm((account.active?'Disable':'Enable')+' access for '+account.display_name+'?'))return;
+            button.disabled=true;
+            try{await api({action:'owner-set-admin',userId:account.user_id,active:!account.active,role:account.role});await refreshOwner();}
+            catch(error){status.textContent=error.message;button.disabled=false;}
+          });
+          row.append(button);
+        }
+        userList.append(row);
+      });
+      auditList.replaceChildren();
+      (history.events||[]).slice(0,30).forEach(change=>{
+        const row=el('div','admin-audit-row');
+        row.append(el('time','',new Date(change.occurred_at).toLocaleString('en-GB')),
+          el('span','',change.action.replace(/_/g,' ')),
+          el('small','',change.enquiry_id||change.order_id||'Access policy'));
+        auditList.append(row);
+      });
+      if(!(history.events||[]).length)auditList.append(el('p','admin-muted','No recorded admin actions yet.'));
+    }catch(error){auditList.replaceChildren(el('p','admin-muted','Security overview unavailable: '+error.message));}
+  }
+  document.querySelector('#admin-owner-refresh').addEventListener('click',refreshOwner);
   async function refresh() {
     status.textContent='Loading enquiries…';
     try {
-      const data = await api({action:'list'});
+      const data=await api({action:'list',offset:pageOffset,limit:pageSize,status:filter.value,search:search.value.trim()});
       records=data.enquiries || [];
-      administrator=data.administrator || 'Administrator';
+      administrator=data.administrator||'Administrator';
+      adminRole=data.adminRole||'operator';
+      matchingTotal=Number(data.total||0);
+      pageCounts=data.counts||{pending:0,confirmed:0,declined:0};
+      ownerPanel.hidden=adminRole!=='owner';
       orderMap=new Map((data.orders || []).map(order => [order.enquiry_id,order]));
       renderMetrics(); renderRecords();
       try {
@@ -462,25 +537,110 @@
       } catch (statisticsError) {
         analyticsCards.replaceChildren(el('p','admin-muted','Business statistics are temporarily unavailable: ' + statisticsError.message));
       }
-      status.textContent=administrator + ' · ' + records.length + ' enquiries · ' + (data.orders || []).length + ' orders';
+      status.textContent=administrator+' ('+(adminRole==='owner'?'Owner':'Operations')+') · '+
+        matchingTotal+' matching enquiries';
+      if(adminRole==='owner')await refreshOwner();
     } catch(error) { status.textContent=error.message; }
   }
-  search.addEventListener('input',renderRecords);
-  filter.addEventListener('change',renderRecords);
-  document.querySelector('#login-form').addEventListener('submit', async event => {
+  let searchDebounce;
+  search.addEventListener('input',() => {
+    clearTimeout(searchDebounce);
+    searchDebounce=setTimeout(()=>{pageOffset=0;refresh();},300);
+  });
+  filter.addEventListener('change',()=>{pageOffset=0;refresh();});
+  document.querySelector('#admin-prev-page').addEventListener('click',()=>{
+    pageOffset=Math.max(0,pageOffset-pageSize);refresh();
+  });
+  document.querySelector('#admin-next-page').addEventListener('click',()=>{
+    if(pageOffset+pageSize<matchingTotal){pageOffset+=pageSize;refresh();}
+  });
+
+  const mfaSection=document.querySelector('#admin-mfa');
+  const mfaSetup=document.querySelector('#admin-mfa-enrol');
+  const mfaInstructions=document.querySelector('#admin-mfa-instructions');
+  const mfaCode=document.querySelector('#admin-mfa-code');
+  let mfaFactorId=null;
+  async function proceedAfterSignIn(){
+    const {data:{session}}=await client.auth.getSession();
+    if(!session){
+      login.hidden=false;dashboard.hidden=true;mfaSection.hidden=true;sessionActions.hidden=true;
+      return;
+    }
+    try{
+      const {data:level,error:levelError}=await client.auth.mfa.getAuthenticatorAssuranceLevel();
+      if(levelError)throw levelError;
+      login.hidden=true;
+      if(level.currentLevel==='aal2'){
+        mfaSection.hidden=true;dashboard.hidden=false;sessionActions.hidden=false;
+        await refresh();
+        return;
+      }
+      dashboard.hidden=true;sessionActions.hidden=true;mfaSection.hidden=false;
+      const {data:factors,error:factorError}=await client.auth.mfa.listFactors();
+      if(factorError)throw factorError;
+      const enrolled=(factors.totp||[]).find(f=>f.status==='verified')||(factors.totp||[])[0];
+      if(enrolled){
+        mfaFactorId=enrolled.id;
+        mfaSetup.hidden=true;
+        mfaInstructions.textContent='Enter the six-digit code from your authenticator app to access the private dashboard.';
+      }else{
+        const {data:factor,error:enrolError}=await client.auth.mfa.enroll({
+          factorType:'totp',friendlyName:'Cakes by Sharn admin'
+        });
+        if(enrolError)throw enrolError;
+        mfaFactorId=factor.id;
+        mfaSetup.hidden=false;
+        mfaInstructions.textContent='First sign-in: set up mandatory two-factor authentication with an authenticator app.';
+        document.querySelector('#admin-mfa-secret').textContent=factor.totp?.secret||'';
+        const qr=document.querySelector('#admin-mfa-qr');
+        const svg=String(factor.totp?.qr_code||'');
+        qr.hidden=!svg;
+        if(svg)qr.src=svg.startsWith('data:')?svg:svg.trim().startsWith('<svg')?
+          'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg):
+          'data:image/svg+xml;base64,'+svg;
+      }
+      mfaCode.focus();
+      status.textContent='Two-factor verification is required before accessing customer records.';
+    }catch(error){
+      dashboard.hidden=true;mfaSection.hidden=false;
+      status.textContent='MFA setup or verification unavailable: '+error.message;
+    }
+  }
+  document.querySelector('#admin-mfa-form').addEventListener('submit',async event=>{
     event.preventDefault();
-    status.textContent = 'Signing in…';
-    const { error } = await client.auth.signInWithPassword({
-      email: document.querySelector('#admin-email').value,
-      password: document.querySelector('#admin-password').value
+    if(!mfaFactorId){status.textContent='Authenticator setup missing. Sign out and sign back in.';return;}
+    const code=mfaCode.value.trim();
+    if(!/^\d{6}$/.test(code)){status.textContent='Enter a six-digit authenticator code.';return;}
+    const verifyButton=document.querySelector('#admin-mfa-verify');
+    verifyButton.disabled=true;
+    try{
+      const {data:challenge,error:challengeError}=await client.auth.mfa.challenge({factorId:mfaFactorId});
+      if(challengeError)throw challengeError;
+      const {error:verifyError}=await client.auth.mfa.verify({factorId:mfaFactorId,challengeId:challenge.id,code});
+      if(verifyError)throw verifyError;
+      mfaCode.value='';
+      await proceedAfterSignIn();
+    }catch(error){status.textContent='Authenticator verification failed: '+error.message;}
+    finally{verifyButton.disabled=false;}
+  });
+  async function signOut(){
+    await client.auth.signOut();
+    dashboard.hidden=true;mfaSection.hidden=true;sessionActions.hidden=true;login.hidden=false;
+    orders.replaceChildren();mfaFactorId=null;
+    status.textContent='Signed out.';
+  }
+  document.querySelector('#login-form').addEventListener('submit',async event=>{
+    event.preventDefault();
+    status.textContent='Signing in…';
+    const {error}=await client.auth.signInWithPassword({
+      email:document.querySelector('#admin-email').value,
+      password:document.querySelector('#admin-password').value
     });
-    if (error) { status.textContent = error.message; return; }
-    login.hidden = true; dashboard.hidden = false; sessionActions.hidden = false; await refresh();
+    if(error){status.textContent=error.message;return;}
+    await proceedAfterSignIn();
   });
-  document.querySelector('#admin-refresh').addEventListener('click', refresh);
-  document.querySelector('#admin-signout').addEventListener('click', async () => {
-    await client.auth.signOut(); dashboard.hidden = true; sessionActions.hidden = true; login.hidden = false; orders.replaceChildren();
-  });
-  const { data: { session } } = await client.auth.getSession();
-  if (session) { login.hidden = true; dashboard.hidden = false; sessionActions.hidden = false; await refresh(); }
+  document.querySelector('#admin-refresh').addEventListener('click',refresh);
+  document.querySelector('#admin-signout').addEventListener('click',signOut);
+  document.querySelector('#admin-mfa-signout').addEventListener('click',signOut);
+  await proceedAfterSignIn();
 })();

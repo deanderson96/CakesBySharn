@@ -1,123 +1,103 @@
 import { cors, respond } from '../_shared/common.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-Deno.serve(async request => {
+
+Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (request.method !== 'POST') return respond({ error: 'Method not allowed' }, 405);
   try {
     const bearer = request.headers.get('authorization') || '';
     if (!bearer.startsWith('Bearer ')) return respond({ error: 'Sign in required' }, 401);
-    const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
-    const { data: { user }, error } = await client.auth.getUser(bearer.slice(7));
-    if (error || !user?.id || !user.email || !user.email_confirmed_at) return respond({ error: 'Not authorised' }, 403);
-    // All database operations use the caller's verified JWT. RLS checks active admin membership.
+    const jwt = bearer.slice(7);
+    const authClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
+    const { data: { user }, error: identityError } = await authClient.auth.getUser(jwt);
+    if (identityError || !user?.id || !user.email_confirmed_at) return respond({ error: 'Not authorised' }, 403);
+    const { data: assurance, error: assuranceError } = await authClient.auth.mfa.getAuthenticatorAssuranceLevel(jwt);
+    if (assuranceError || assurance?.currentLevel !== 'aal2') return respond({ error: 'Multi-factor authentication required' }, 403);
+
+    // Every database query runs with the verified caller's JWT; RLS and RPCs
+    // independently check active administrator membership and AAL2.
     const database = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: bearer } }
     });
-    // A verified Supabase Auth session is necessary but not sufficient:
-    // membership in this private, server-only allowlist is mandatory.
     const { data: administrator, error: adminError } = await database.from('admin_accounts')
-      .select('user_id,display_name').eq('user_id', user.id).eq('active', true).maybeSingle();
+      .select('user_id,display_name,role').eq('user_id', user.id).eq('active', true).maybeSingle();
     if (adminError) throw adminError;
     if (!administrator) return respond({ error: 'Not authorised' }, 403);
-    const input = await request.json();
-    if (input.action === 'tax-year-report') {
+
+    const raw = await request.text();
+    if (new TextEncoder().encode(raw).length > 20000) return respond({ error: 'Request too large' }, 413);
+    let input: Record<string, unknown>;
+    try { input = JSON.parse(raw); } catch { return respond({ error: 'Invalid JSON' }, 400); }
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return respond({ error: 'Invalid request' }, 400);
+    const action = String(input.action || '');
+    const rpc = async (name: string, args: Record<string, unknown> = {}) => {
+      const { data, error } = await database.rpc(name, args);
+      if (error) { console.error('Admin RPC error', name, error.code, error.message); throw new Error('Unable to complete this action. Refresh and check the current record state.'); }
+      return data;
+    };
+    const requireOwner = () => {
+      if (administrator.role !== 'owner') throw new Error('Owner permissions required');
+    };
+    const id = String(input.id || '');
+    if (action === 'list') {
+      const offset = Number(input.offset || 0), limit = Number(input.limit || 25);
+      const selected = String(input.status || 'all'), search = String(input.search || '').trim();
+      if (!Number.isInteger(offset) || offset < 0 || !Number.isInteger(limit) || limit < 1 || limit > 100 ||
+        !['all','pending','confirmed','declined'].includes(selected) || search.length > 100) return respond({ error: 'Invalid listing parameters' }, 400);
+      const data = await rpc('admin_paginated_enquiries', {
+        p_offset: offset, p_limit: limit, p_status: selected, p_search: search
+      });
+      return respond({ ...data, administrator: administrator.display_name, adminRole: administrator.role });
+    }
+    if (action === 'statistics') return respond({ statistics: await rpc('admin_business_statistics') });
+    if (action === 'tax-year-report') {
       const year = Number(input.startYear);
       if (!Number.isInteger(year) || year < 2020 || year > new Date().getUTCFullYear()) return respond({ error: 'Invalid tax year' }, 400);
-      const { data: report, error: reportError } = await database.rpc('admin_tax_year_report', {p_start_year: year});
-      if (reportError) throw reportError;
-      return respond({ report });
+      return respond({ report: await rpc('admin_tax_year_report', { p_start_year: year }) });
     }
-    if (input.action === 'accounting-export') {
-      const { data: records, error: exportError } = await database.rpc('admin_accounting_export');
-      if (exportError) throw exportError;
-      return respond({ orders: records || [] });
+    if (action === 'accounting-export') return respond({ orders: await rpc('admin_accounting_export') || [] });
+    if (action === 'owner-admins') { requireOwner(); return respond({ admins: await rpc('owner_list_admins') }); }
+    if (action === 'owner-audit') { requireOwner(); return respond({ events: await rpc('owner_audit_log', { p_limit: 100 }) }); }
+    if (action === 'owner-set-admin') {
+      requireOwner();
+      const target = String(input.userId || ''), role = String(input.role || '');
+      if (!/^[0-9a-f-]{36}$/i.test(target) || typeof input.active !== 'boolean' || !['owner','operator'].includes(role))
+        return respond({ error: 'Invalid administrator update' }, 400);
+      return respond({ administrator: await rpc('owner_set_admin', {
+        p_user_id: target, p_active: input.active, p_role: role
+      }) });
     }
-    if (input.action === 'statistics') {
-      const { data: statistics, error: statisticsError } = await database.rpc('admin_business_statistics');
-      if (statisticsError) throw statisticsError;
-      if (!statistics) return respond({ error: 'Statistics unavailable' }, 403);
-      return respond({ statistics });
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return respond({ error: 'Invalid enquiry or order reference' }, 400);
+    if (action === 'confirm' || action === 'decline') {
+      const date = String(input.confirmedDate || ''), time = String(input.confirmedTime || '');
+      const total = Number(input.finalTotalPence), notes = String(input.notes || '').trim();
+      if (notes.length > 1500 || (action === 'confirm' && (!/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+        time.length > 100 || !Number.isSafeInteger(total) || total < 0 || total > 100000000)))
+        return respond({ error: 'Invalid order details' }, 400);
+      return respond(await rpc('admin_decide_enquiry', {
+        p_id: id, p_action: action, p_date: action === 'confirm' ? date : null,
+        p_time: action === 'confirm' ? time : null,
+        p_total_pence: action === 'confirm' ? total : null, p_notes: notes
+      }));
     }
-    if (input.action === 'list') {
-      const { data, error } = await database.from('enquiries').select('*').order('created_at', { ascending: false }).limit(100);
-      if (error) throw error;
-      const records = data || [];
-      if (!records.length) return respond({ enquiries: [], orders: [], administrator: administrator.display_name });
-      const { data: replies, error: repliesError } = await database.from('enquiry_replies')
-        .select('enquiry_id,sent_at,message')
-        .in('enquiry_id', records.map(enquiry => enquiry.id))
-        .order('sent_at', { ascending: true });
-      if (repliesError) throw repliesError;
-      const { data: orders, error: orderError } = await database.from('orders').select('*').order('created_at', { ascending: false }).limit(100);
-      if (orderError) throw orderError;
-      return respond({ administrator: administrator.display_name, orders: orders || [], enquiries: records.map(enquiry => ({
-        ...enquiry,
-        replies: (replies || []).filter(reply => reply.enquiry_id === enquiry.id)
-      })) });
+    if (action === 'log-reply') {
+      const message = String(input.message || '').trim();
+      if (!message || message.length > 2000) return respond({ error: 'Invalid reply' }, 400);
+      return respond(await rpc('admin_record_reply', { p_id: id, p_message: message }));
     }
-    if (!['log-reply', 'confirm', 'decline', 'mark-notified'].includes(input.action)) return respond({ error: 'Invalid action' }, 400);
-    const id = String(input.id || '');
-    if (!/^[0-9a-f-]{36}$/i.test(id)) return respond({ error: 'Invalid reference' }, 400);
-    const { data: enquiry, error: readError } = await database.from('enquiries').select('*').eq('id', id).single();
-    if (readError || !enquiry) return respond({ error: 'Enquiry not found' }, 404);
-    if (input.action === 'log-reply') {
-      const reply = String(input.message || '').trim();
-      if (reply.length < 1 || reply.length > 2000) return respond({ error: 'Write a message of up to 2,000 characters' }, 400);
-      const { error: logError } = await database.from('enquiry_replies').insert({ enquiry_id: enquiry.id, message: reply, recorded_by: user.id });
-      if (logError) throw logError;
-      // The email/WhatsApp message was sent outside this system; never claim automated delivery.
-      return respond({ recorded: true });
-    }
-    if (input.action === 'mark-notified') {
-      if (enquiry.status !== 'confirmed') return respond({ error: 'Only confirmed orders can be marked notified' }, 409);
+    if (action === 'mark-notified') {
       const method = String(input.method || '');
-      if (!['email', 'sms', 'whatsapp'].includes(method)) return respond({ error: 'Choose email, text message or WhatsApp' }, 400);
-      if (method !== (enquiry.contact_method || 'email')) return respond({ error: 'Use the customer\'s selected contact method' }, 400);
-      const { data: order, error: orderError } = await database.from('orders').update({
-        customer_notified_at: new Date().toISOString(), notification_method: method, customer_notified_by: user.id
-      }).eq('enquiry_id', id).select('order_reference').single();
-      if (orderError) throw orderError;
-      const { error: notifiedError } = await database.from('enquiries').update({ notified_at: new Date().toISOString() }).eq('id', id);
-      if (notifiedError) throw notifiedError;
-      return respond({ notified: true, orderReference: order.order_reference });
+      if (!['email','sms','whatsapp'].includes(method)) return respond({ error: 'Invalid contact method' }, 400);
+      return respond(await rpc('admin_mark_notified', { p_enquiry_id: id, p_method: method }));
     }
-    if (enquiry.status !== 'pending') return respond({ error: 'Enquiry already processed' }, 409);
-    const confirm = input.action === 'confirm';
-    const confirmedDate = String(input.confirmedDate || '');
-    const confirmedTime = String(input.confirmedTime || '').trim();
-    const total = Number(input.finalTotalPence);
-    const notes = String(input.notes || '').trim();
-    if (notes.length > 1500) return respond({ error: 'Notes too long' }, 400);
-    if (confirm && (!/^\d{4}-\d{2}-\d{2}$/.test(confirmedDate) || Number.isNaN(Date.parse(confirmedDate)) || confirmedDate < new Date().toISOString().slice(0,10) || !confirmedTime || confirmedTime.length > 100 || !Number.isSafeInteger(total) || total < 0 || total > 100000000)) return respond({ error: 'Valid confirmed date, time and final price required' }, 400);
-    if (confirm) {
-      // The unique enquiry_id on orders prevents creating duplicate orders.
-      const { data: order, error: orderError } = await database.from('orders').insert({
-        enquiry_id: id, customer_name: enquiry.customer_name, customer_email: enquiry.customer_email,
-        customer_mobile: enquiry.customer_mobile, contact_method: enquiry.contact_method || 'email',
-        fulfilment: enquiry.fulfilment, delivery_address: enquiry.delivery_address,
-        items: enquiry.items, total_pence: total, agreed_date: confirmedDate,
-        agreed_time: confirmedTime, notes, approved_by: user.id
-      }).select('order_reference').single();
-      if (orderError) return respond({ error: 'Could not create order; it may already exist. Refresh before retrying.' }, 409);
-      const { data: changed, error: writeError } = await database.from('enquiries').update({
-        status: 'confirmed', confirmed_date: confirmedDate, confirmed_time: confirmedTime,
-        final_total_pence: total, sharn_notes: notes, reviewed_by: user.id, confirmed_at: new Date().toISOString()
-      }).eq('id', id).eq('status', 'pending').select('id').maybeSingle();
-      if (writeError || !changed) {
-        const { error: rollbackError } = await database.from('orders').delete().eq('enquiry_id', id);
-        if (rollbackError) console.error('Manual reconciliation needed for', id);
-        return respond({ error: 'Order status update failed. Refresh and contact support before retrying.' }, 409);
-      }
-      return respond({ status: 'confirmed', orderReference: order.order_reference, customerNotified: false });
+    if (action === 'set-order-status') {
+      const status = String(input.orderStatus || ''), reason = String(input.reason || '').trim();
+      if (!['completed','cancelled'].includes(status) || reason.length > 500) return respond({ error: 'Invalid order status' }, 400);
+      return respond(await rpc('admin_set_order_status', { p_order_id: id, p_status: status, p_reason: reason }));
     }
-    const { data: changed, error: writeError } = await database.from('enquiries').update({
-      status: 'declined', sharn_notes: notes, reviewed_by: user.id
-    }).eq('id', id).eq('status', 'pending').select('id').maybeSingle();
-    if (writeError) throw writeError;
-    if (!changed) return respond({ error: 'Already processed; please refresh' }, 409);
-    return respond({ status: 'declined', customerNotified: false });
+    return respond({ error: 'Invalid action' }, 400);
   } catch (error) {
-    console.error(error);
-    return respond({ error: 'Unable to process request; check status before retrying' }, 500);
+    console.error('manage-enquiries error', error);
+    return respond({ error: 'Unable to process your request. Please try again or contact the site owner.' }, 500);
   }
 });
