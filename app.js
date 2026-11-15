@@ -63,6 +63,8 @@ const MENU = [
 ];
 
 const formatter = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' });
+const ENQUIRY_EMAIL = 'cakesbysharnx@hotmail.com';
+const ENQUIRY_SUBJECT = 'Cakes by Sharn - Order enquiry';
 const filtersElement = document.querySelector('#menu-filters');
 const groupsElement = document.querySelector('#menu-groups');
 const basketItemsElement = document.querySelector('#basket-items');
@@ -239,13 +241,24 @@ function buildMessage() {
   lines.push('Could you please confirm availability and pricing? Thank you!');
   return lines.join('\n');
 }
+// A mailto link opens a draft in the customer's configured email app.
+ // No email is sent by this website; the customer must press Send.
+function prepareEmailEnquiry(event) {
+  if (!validateEnquiry()) {
+    event.preventDefault();
+    return;
+  }
+  const query = 'subject=' + encodeURIComponent(ENQUIRY_SUBJECT)
+    + '&body=' + encodeURIComponent(buildMessage());
+  event.currentTarget.href = 'mailto:' + ENQUIRY_EMAIL + '?' + query;
+}
 async function copyMessage() {
   if (!validateEnquiry()) return;
   const text = buildMessage();
   try {
     if (!navigator.clipboard || !window.isSecureContext) throw new Error('Clipboard API unavailable');
     await navigator.clipboard.writeText(text);
-    showToast('Enquiry copied! Paste it into your message to Sharn.');
+    showToast('Enquiry copied! Paste it into an email to Sharn.');
   } catch (_) {
     const textarea = document.createElement('textarea');
     textarea.value = text;
@@ -263,7 +276,7 @@ async function copyMessage() {
     textarea.remove();
     if (success) showToast('Enquiry copied! Paste it into your message to Sharn.');
     else {
-      const preview = window.prompt('Copy this enquiry and paste it into Instagram or Facebook:', text);
+      const preview = window.prompt('Copy this enquiry and paste it into an email to Sharn:', text);
       if (preview !== null) showToast('Your enquiry text is ready to share.');
     }
   }
@@ -290,7 +303,10 @@ if ('IntersectionObserver' in window) {
 dateField.addEventListener('focus', setMinimumDate);
 for (const field of [notesField, dateField]) field.addEventListener('input', clearEnquiryError);
 document.querySelector('#clear-enquiry').addEventListener('click', clearEnquiry);
-form.addEventListener('submit', event => { event.preventDefault(); copyMessage(); });
+form.addEventListener('submit', event => {
+  event.preventDefault();
+  document.querySelector('#email-enquiry').click();
+});
 document.querySelector('#year').textContent = new Date().getFullYear();
 
 filtersElement.addEventListener('click', event => {
@@ -314,6 +330,7 @@ document.addEventListener('click', event => {
   }
 });
 
+document.querySelector('#email-enquiry').addEventListener('click', prepareEmailEnquiry);
 document.querySelector('#copy-enquiry').addEventListener('click', copyMessage);
 
 menuToggle.addEventListener('click', () => {

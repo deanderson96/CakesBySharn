@@ -10,11 +10,11 @@ A responsive static website for Cakes by Sharn, using the business's turquoise b
 - **Non-persistent basket:** selections are held in JavaScript memory only while the page is open. They are reset when the page is reloaded or reopened. The old localStorage basket key is deleted on load.
 - **In-page enquiry section** with normal document scrolling instead of a fixed modal/drawer, to avoid mobile keyboard, scroll-lock and frozen-panel issues.
 - Basic enquiry checks: either select a menu item or describe a custom request (at least 10 characters); dates in the past cannot be used.
-- Copy-to-clipboard message and links to Instagram and Facebook for the customer to send it.
+- **Email enquiry:** opens the customer's default email app with `cakesbysharnx@hotmail.com` pre-addressed, a subject, and a body containing selected items, quantities, estimates, name, preferred date and requirements. A copy-text fallback remains available if no email app is configured.
 - Dynamic prices and explanatory text for items with quoted or starting prices.
 - SEO basics including canonical URL, Open Graph metadata, sitemap and robots.txt.
 
-**An enquiry is not a confirmed order.** The website does not take payments, send social messages or transmit customer details to a server. Customers must paste their copied enquiry into a message and receive confirmation from Sharn.
+**An enquiry is not a confirmed order.** The site does not take payments or automatically send messages. Clicking **Open email with enquiry** creates a `mailto:` link and asks the customer's email app to open a draft. The customer must review the draft and press **Send**. No data is transmitted to the site or a server by this action.
 
 ## Local development
 
@@ -47,11 +47,11 @@ If you change the domain or repository name, update the canonical, Open Graph an
 | SVG cake illustrations | `assets/*.svg` |
 | Search/social-sharing URLs | `index.html`, `sitemap.xml`, `robots.txt` |
 
-The enquiry uses **in-memory state**, not persistent browser storage. The user's name and notes are only used locally to assemble the message that the user explicitly copies.
+The enquiry uses **in-memory state**, not persistent browser storage. The customer's name and notes are only used locally to assemble an email draft or copyable text. The recipient is configured as `ENQUIRY_EMAIL` in `app.js`; update it there and in the static contact link in `index.html` if the business address changes.
 
 ## Automated browser tests
 
-Browser regression checks are in `tests/smoke.py`, with an Actions workflow in `.github/workflows/website-checks.yml`. They exercise Chromium and WebKit at mobile and desktop sizes and cover basket quantities, clear-all, form validation, in-page navigation, reload/reset behaviour, script errors and horizontal overflow.
+Browser regression checks are in `tests/smoke.py`, with an Actions workflow in `.github/workflows/website-checks.yml`. They exercise Chromium and WebKit at mobile and desktop sizes and cover basket quantities, clear-all, date and empty-request validation, pre-populated email recipient/subject/body, the copy-text fallback, reload/reset behaviour, script errors and horizontal overflow.
 
 To run locally:
 
@@ -61,7 +61,7 @@ python -m playwright install chromium webkit
 python tests/smoke.py
 ```
 
-Browser automation is **not** a substitute for testing a physical iPhone or Instagram/Facebook in-app browser.
+Browser automation is **not** a substitute for testing an actual email app on a physical phone, including iOS Safari and in-app browsers. `mailto:` requires a configured mail application or handler; a browser cannot guarantee the draft opens if none is configured.
 
 ## Before relying on the site for orders
 

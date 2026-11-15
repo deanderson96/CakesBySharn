@@ -466,3 +466,11 @@ h2 em { font-size: 1.08em; }
   .basket-line { align-items: center; }
   .basket-line-estimate { font-size: 14px; }
 }
+
+/* Email ordering: prominent native mailto link with a copy-text fallback. */
+.enquiry-email { display:flex; width:100%; min-height:52px; margin-top:6px; white-space:normal; text-align:center; }
+.enquiry-email-help { color:#405f59; font-size:13px; line-height:1.65; margin:14px 0 6px; }
+.enquiry-copy-fallback { display:block; width:100%; min-height:44px; margin:6px 0 16px; padding:9px 12px; color:#00646b; font-size:13px; font-weight:700; text-align:center; text-decoration:underline; text-underline-offset:3px; border:0; background:transparent; border-radius:8px; }
+.enquiry-copy-fallback:hover { background:#edf8f5; }
+.enquiry-copy-fallback:focus-visible { outline:3px solid #e4a44c; outline-offset:3px; }
+@media (max-width:600px) { .enquiry-email { gap:12px; padding:15px 14px; font-size:15px; } }
