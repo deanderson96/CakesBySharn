@@ -260,6 +260,15 @@ renderFilters();
 renderMenu();
 renderBasket();
 setMinimumDate();
+// The floating enquiry shortcut must not cover form controls while ordering.
+const enquirySection = document.querySelector('#enquiry');
+const enquiryShortcut = document.querySelector('#basket-trigger');
+if ('IntersectionObserver' in window) {
+  const enquiryVisibility = new IntersectionObserver(entries => {
+    enquiryShortcut.classList.toggle('enquiry-in-view', entries[0].isIntersecting);
+  }, { threshold: 0 });
+  enquiryVisibility.observe(enquirySection);
+}
 dateField.addEventListener('focus', setMinimumDate);
 for (const field of [notesField, dateField]) field.addEventListener('input', clearEnquiryError);
 document.querySelector('#clear-enquiry').addEventListener('click', clearEnquiry);

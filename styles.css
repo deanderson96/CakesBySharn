@@ -415,3 +415,41 @@ h2 em { font-size: 1.08em; }
  .menu-add { width:44px; height:44px; }
  .basket-fab { bottom:max(14px,env(safe-area-inset-bottom)); }
 }
+
+/* Mobile form alignment: iOS date controls must not use their intrinsic width. */
+.enquiry-details, .enquiry-details #enquiry-form, .enquiry-details .form-field {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.enquiry-details .form-field input,
+.enquiry-details .form-field textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  border-radius: 12px;
+}
+.enquiry-details input[type="date"] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 52px;
+  line-height: normal;
+}
+.enquiry-details input[type="date"]::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}
+.enquiry-details input[type="date"]::-webkit-calendar-picker-indicator {
+  margin-left: auto;
+}
+.enquiry-details .drawer-socials a { box-sizing: border-box; width: 100%; }
+.basket-fab.enquiry-in-view { opacity: 0; visibility: hidden; pointer-events: none; }
