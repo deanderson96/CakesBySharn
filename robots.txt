@@ -1,2 +1,3 @@
 User-agent: *
 Allow: /
+Sitemap: https://deanderson96.github.io/CakesBySharn/sitemap.xml

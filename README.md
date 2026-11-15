@@ -1,115 +1,77 @@
-# Cakes by Sharn — website
+# Cakes by Sharn
 
-A responsive, dependency-free website for **Cakes by Sharn**, based on the logo, menu and social links supplied by the business.
+A responsive static website for Cakes by Sharn, using the business's turquoise branding and supplied menu. The site contains no payment processing, backend or tracking scripts.
 
-![Website header illustration](assets/social-preview.png)
+## Site features
 
-## What's included
+- Full menu of afternoon teas, loaves, traditional bakes, cupcakes and celebration cakes.
+- Filtering by category, item quantities and an enquiry summary.
+- **One-tap Clear enquiry**, which empties both the basket and the enquiry form.
+- **Non-persistent basket:** selections are held in JavaScript memory only while the page is open. They are reset when the page is reloaded or reopened. The old localStorage basket key is deleted on load.
+- **In-page enquiry section** with normal document scrolling instead of a fixed modal/drawer, to avoid mobile keyboard, scroll-lock and frozen-panel issues.
+- Basic enquiry checks: either select a menu item or describe a custom request (at least 10 characters); dates in the past cannot be used.
+- Copy-to-clipboard message and links to Instagram and Facebook for the customer to send it.
+- Dynamic prices and explanatory text for items with quoted or starting prices.
+- SEO basics including canonical URL, Open Graph metadata, sitemap and robots.txt.
 
-- Mobile-friendly landing page with the existing turquoise branding
-- Afternoon teas, loaves, traditional bakes, cupcakes and celebration cakes
-- Menu filters and an interactive **order enquiry builder**
-- Editable quantities, optional customer details and a copy-to-clipboard enquiry
-- Direct links to Instagram and Facebook
-- Brand logo and SVG illustrations, with menu items transcribed from the supplied menu
-- Basic SEO, Open Graph metadata, keyboard-friendly mobile navigation and enquiry drawer
-- No framework, accounts, dependencies, build step or server-side checkout required
+**An enquiry is not a confirmed order.** The website does not take payments, send social messages or transmit customer details to a server. Customers must paste their copied enquiry into a message and receive confirmation from Sharn.
 
-**Important:** An enquiry is not a placed or confirmed order. The website does not take payments, send messages on the customer's behalf, guarantee stock or track orders. Customers copy their enquiry and paste it into Instagram or Facebook to contact Sharn.
+## Local development
 
-## Quick preview
+Open `index.html` directly, or serve the project folder:
 
-Open `index.html` in your browser. Alternatively, from this folder run:
-
-```bash
+```sh
 python3 -m http.server 8000
 ```
 
-Then visit `http://localhost:8000`.
+Then open http://localhost:8000. The production site does not require Node, Python or a build step.
 
-## Publish on GitHub Pages
+## Hosting
 
-This website is already stored in [deanderson96/CakesBySharn](https://github.com/deanderson96/CakesBySharn) on the `main` branch.
+This repository is intended for GitHub Pages at:
 
-To publish it, open **Settings → Pages → Build and deployment** in GitHub, select **Deploy from a branch**, choose `main` and `/ (root)`, then save. GitHub Pages will provide a public site URL after deployment.
+https://deanderson96.github.io/CakesBySharn/
 
-To work on the site locally, clone this repository:
+In GitHub **Settings → Pages**, choose **Deploy from a branch**, then `main` and `/ (root)`. The public address is available when deployment succeeds.
 
-```bash
-git clone https://github.com/deanderson96/CakesBySharn.git
-cd CakesBySharn
-python3 -m http.server 8000
-```
+If you change the domain or repository name, update the canonical, Open Graph and sitemap URLs.
 
-Visit `http://localhost:8000` to preview the site. No build tools are needed.
+## Editing the business website
 
-## Other hosts
-
-- **Netlify:** Connect the GitHub repository or drag the extracted site files into the deploy interface. No build command is needed; publish the root folder.
-- **Vercel:** Import the GitHub repository, choose the **Other** framework preset, and use the root directory for deployment. No build command or compiled output directory is required.
-- **Any static web host:** Upload `index.html`, `styles.css`, `app.js` and the entire `assets/` directory, keeping the same paths.
-
-## Updating the site
-
-| Change | File |
+| What to change | File |
 | --- | --- |
-| Menu items and prices | `app.js` → `MENU` constant near the top |
-| Instagram / Facebook | `index.html` (search for `cakesbysharnx`) |
-| Text, sections and buttons | `index.html` |
-| Colours, fonts and layout | `styles.css` (`:root` variables at top) |
+| Menu items and prices | `app.js`, `MENU` near the top |
+| General text, forms and contact links | `index.html` |
+| Appearance, typography and responsive layout | `styles.css` |
 | Brand logo | `assets/cakes-by-sharn-logo.jpg` |
-| Illustrations | `assets/*.svg` |
+| SVG cake illustrations | `assets/*.svg` |
+| Search/social-sharing URLs | `index.html`, `sitemap.xml`, `robots.txt` |
 
-Menu entries accept `priceType: 'fixed'`, `'from'` or `'quote'`:
+The enquiry uses **in-memory state**, not persistent browser storage. The user's name and notes are only used locally to assemble the message that the user explicitly copies.
 
-```js
-{ name: 'Banana loaf', price: 5, priceType: 'fixed' }
-{ name: '7-inch buttercream cake', price: 45, priceType: 'from' }
-{ name: 'Personalised cupcakes', priceType: 'quote' }
+## Automated browser tests
+
+Browser regression checks are in `tests/smoke.py`, with an Actions workflow in `.github/workflows/website-checks.yml`. They exercise Chromium and WebKit at mobile and desktop sizes and cover basket quantities, clear-all, form validation, in-page navigation, reload/reset behaviour, script errors and horizontal overflow.
+
+To run locally:
+
+```sh
+python -m pip install playwright==1.57.0
+python -m playwright install chromium webkit
+python tests/smoke.py
 ```
 
-The enquiry basket stores product selections in the customer's browser using `localStorage`. Names, preferred dates and other details entered in the enquiry form are not stored or transmitted by the website.
+Browser automation is **not** a substitute for testing a physical iPhone or Instagram/Facebook in-app browser.
 
-## Before the public launch
+## Before relying on the site for orders
 
-The source menu was supplied as an image and could be out of date. **Ask Sharn to confirm every price and product** before publishing. The site purposely does not invent an address, delivery area, food hygiene rating, opening hours, email, phone number or allergy assurances. Add these only after the business confirms them.
+- Ask Sharn to confirm all menu items, prices and lead times, especially for custom cakes.
+- Confirm collection/delivery arrangements and service area before publishing specifics. Do not publish a residential address without consent.
+- Confirm ingredient and allergen information and the process for supplying it to customers before orders are agreed.
+- Replace or complement the illustrations with business-approved photographs of actual cakes.
+- Check the live GitHub Pages deployment and manually test iOS Safari and relevant in-app browsers.
 
-The site uses **illustrations, not photographs of Cakes by Sharn's products**. Replace or complement the artwork with the business's own cake photographs whenever they're available.
-
-For reliable social preview images, update the `og:image` meta tag in `index.html` to the **absolute HTTPS URL** of the deployed `assets/social-preview.png` image once the domain is known. You can also update the page description and add any verified business details.
-
-Fonts are requested from Google Fonts; the site includes system font fallbacks and remains usable without the font service. No analytics or tracking scripts have been added.
-
-## File structure
-
-```text
-cakes-by-sharn/
-├── .gitignore
-├── index.html               # Content and accessible markup
-├── styles.css               # Responsive site styles
-├── app.js                   # Menu, filters and enquiry builder
-├── robots.txt
-├── README.md
-└── assets/
-    ├── cakes-by-sharn-logo.jpg
-    ├── hero-cake.svg
-    ├── celebration-cake.svg
-    ├── afternoon-tea.svg
-    ├── loaf.svg
-    ├── brownies.svg
-    ├── cupcakes.svg
-    ├── favicon.svg
-    ├── social-preview.svg
-    └── social-preview.png
-```
-
-## Social links
+## Social profiles
 
 - Instagram: https://www.instagram.com/cakesbysharnx/
 - Facebook: https://www.facebook.com/cakesbysharnx/
-
-Both are taken directly from the supplied links.
-
-## Ownership
-
-This starter site was made specifically for Cakes by Sharn. Business logos, images and written materials remain the property of their respective owners. No third-party product photos or testimonials have been introduced.

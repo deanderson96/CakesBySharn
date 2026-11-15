@@ -62,44 +62,54 @@ const MENU = [
   },
 ];
 
-const STORAGE_KEY = 'cakes-by-sharn-enquiry-v1';
 const formatter = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' });
 const filtersElement = document.querySelector('#menu-filters');
 const groupsElement = document.querySelector('#menu-groups');
 const basketItemsElement = document.querySelector('#basket-items');
 const basketCountElement = document.querySelector('#basket-count');
 const basketTotalElement = document.querySelector('#basket-total');
-const drawer = document.querySelector('#basket-drawer');
-const backdrop = document.querySelector('#drawer-backdrop');
 const menuToggle = document.querySelector('.mobile-menu-toggle');
 const mainNav = document.querySelector('#site-nav');
 const toastElement = document.querySelector('#toast');
+const enquiryError = document.querySelector('#enquiry-error');
+const notesField = document.querySelector('#order-notes');
+const dateField = document.querySelector('#preferred-date');
+const form = document.querySelector('#enquiry-form');
 let activeFilter = 'all';
 let toastTimer;
-let previousFocus = null;
-
-
-const ITEM_LOOKUP = new Map(
-  MENU.flatMap(group => group.items.map((item, index) => [`${group.id}:${index}`, { ...item, group: group.title }]))
-);
-
-function loadCart() {
-  try {
-    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    if (!data || typeof data !== 'object' || Array.isArray(data)) return {};
-    return Object.fromEntries(
-      Object.entries(data)
-        .filter(([key, qty]) => ITEM_LOOKUP.has(key) && Number.isInteger(qty) && qty > 0)
-        .map(([key, qty]) => [key, Math.min(qty, 99)])
-    );
-  } catch (_) {
-    return {};
-  }
+const ITEM_LOOKUP = new Map(MENU.flatMap(group => group.items.map((item, index) => [group.id + ':' + index, { ...item, group: group.title }])));
+let cart = {};
+// Remove the basket created by older site versions; new enquiries stay in memory only.
+try { localStorage.removeItem('cakes-by-sharn-enquiry-v1'); } catch (_) {}
+function localToday() {
+  const date = new Date();
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
 }
-let cart = loadCart();
-
-function saveCart() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cart)); } catch (_) { /* Storage may be unavailable. */ }
+function setMinimumDate() { dateField.min = localToday(); }
+function clearEnquiryError() {
+  enquiryError.hidden = true;
+  enquiryError.textContent = '';
+  notesField.removeAttribute('aria-invalid');
+  dateField.removeAttribute('aria-invalid');
+}
+function showEnquiryError(message, field) {
+  enquiryError.textContent = message;
+  enquiryError.hidden = false;
+  if (field) field.setAttribute('aria-invalid', 'true');
+  enquiryError.focus();
+}
+function validateEnquiry() {
+  clearEnquiryError();
+  setMinimumDate();
+  if (!Object.keys(cart).length && notesField.value.trim().length < 10) {
+    showEnquiryError('Add an item or describe your request in at least 10 characters.', notesField);
+    return false;
+  }
+  if (dateField.value && (dateField.value < dateField.min || Number.isNaN(Date.parse(dateField.value)))) {
+    showEnquiryError('Choose today or a future date.', dateField);
+    return false;
+  }
+  return true;
 }
 function priceText(item) {
   if (item.priceType === 'quote') return 'Ask for price';
@@ -138,7 +148,7 @@ function renderBasket() {
   basketCountElement.setAttribute('aria-label', `${totalCount} items in enquiry`);
 
   if (!entries.length) {
-    basketItemsElement.innerHTML = '<div class="basket-empty"><span aria-hidden="true">✦</span><strong>No items selected yet</strong><p>Browse the menu and tap + to add some treats, or send a general enquiry below.</p></div>';
+    basketItemsElement.innerHTML = '<div class="basket-empty"><span aria-hidden="true">✦</span><strong>No items selected</strong><p><a href="#menu">Choose menu items</a> or describe your custom request in the form.</p></div>';
     basketTotalElement.hidden = true;
     return;
   }
@@ -169,7 +179,6 @@ function showToast(message) {
 function addItem(key) {
   if (!ITEM_LOOKUP.has(key)) return;
   cart[key] = Math.min((cart[key] || 0) + 1, 99);
-  saveCart();
   renderBasket();
   showToast(`${ITEM_LOOKUP.get(key).name} added to your enquiry`);
 }
@@ -178,27 +187,15 @@ function updateQuantity(key, amount) {
   const newQuantity = Math.max(0, Math.min(99, (cart[key] || 0) + amount));
   if (!newQuantity) delete cart[key];
   else cart[key] = newQuantity;
-  saveCart();
   renderBasket();
 }
-function openDrawer() {
-  previousFocus = document.activeElement;
-  backdrop.hidden = false;
-  document.body.classList.add('drawer-open');
-  drawer.setAttribute('aria-hidden', 'false');
-  requestAnimationFrame(() => {
-    backdrop.classList.add('visible');
-    drawer.classList.add('open');
-    document.querySelector('#drawer-close').focus({ preventScroll: true });
-  });
-}
-function closeDrawer() {
-  drawer.classList.remove('open');
-  backdrop.classList.remove('visible');
-  drawer.setAttribute('aria-hidden', 'true');
-  document.body.classList.remove('drawer-open');
-  window.setTimeout(() => { if (!drawer.classList.contains('open')) backdrop.hidden = true; }, 300);
-  if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
+function clearEnquiry() {
+  cart = {};
+  form.reset();
+  setMinimumDate();
+  clearEnquiryError();
+  renderBasket();
+  showToast('Enquiry cleared.');
 }
 function buildMessage() {
   const name = document.querySelector('#customer-name').value.trim();
@@ -225,6 +222,7 @@ function buildMessage() {
   return lines.join('\n');
 }
 async function copyMessage() {
+  if (!validateEnquiry()) return;
   const text = buildMessage();
   try {
     if (!navigator.clipboard || !window.isSecureContext) throw new Error('Clipboard API unavailable');
@@ -234,7 +232,12 @@ async function copyMessage() {
     const textarea = document.createElement('textarea');
     textarea.value = text;
     textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
+    textarea.style.left = '0';
+    textarea.style.top = '0';
+    textarea.style.width = '1px';
+    textarea.style.height = '1px';
+    textarea.style.opacity = '0';
+    textarea.style.pointerEvents = 'none';
     document.body.appendChild(textarea);
     textarea.select();
     let success = false;
@@ -256,6 +259,11 @@ function closeMobileNav() {
 renderFilters();
 renderMenu();
 renderBasket();
+setMinimumDate();
+dateField.addEventListener('focus', setMinimumDate);
+for (const field of [notesField, dateField]) field.addEventListener('input', clearEnquiryError);
+document.querySelector('#clear-enquiry').addEventListener('click', clearEnquiry);
+form.addEventListener('submit', event => { event.preventDefault(); copyMessage(); });
 document.querySelector('#year').textContent = new Date().getFullYear();
 
 filtersElement.addEventListener('click', event => {
@@ -279,9 +287,6 @@ document.addEventListener('click', event => {
   }
 });
 
-document.querySelector('#basket-trigger').addEventListener('click', openDrawer);
-document.querySelector('#drawer-close').addEventListener('click', closeDrawer);
-backdrop.addEventListener('click', closeDrawer);
 document.querySelector('#copy-enquiry').addEventListener('click', copyMessage);
 
 menuToggle.addEventListener('click', () => {
@@ -292,14 +297,5 @@ menuToggle.addEventListener('click', () => {
 mainNav.querySelectorAll('a').forEach(link => link.addEventListener('click', closeMobileNav));
 
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') {
-    if (drawer.classList.contains('open')) closeDrawer();
-    closeMobileNav();
-  }
-  if (event.key !== 'Tab' || !drawer.classList.contains('open')) return;
-  const focusable = [...drawer.querySelectorAll('button, a[href], input, textarea')].filter(el => !el.disabled);
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  if (event.key === 'Escape') closeMobileNav();
 });
