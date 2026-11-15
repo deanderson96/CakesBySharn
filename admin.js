@@ -32,6 +32,41 @@
     return [wrap, input];
   }
 
+  const taxYearSelect = document.querySelector('#admin-tax-year');
+  const taxReportButton = document.querySelector('#admin-tax-report');
+  const londonToday = new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const [currentYear,currentMonth,currentDay] = londonToday.split('-').map(Number);
+  const currentTaxStart = currentMonth < 4 || (currentMonth === 4 && currentDay < 6) ? currentYear - 1 : currentYear;
+  for (let year=currentTaxStart;year>=2020;year--) {
+    const option = document.createElement('option');
+    option.value = String(year);
+    option.textContent = year + '–' + String(year+1).slice(-2) + (year===currentTaxStart?' (current)':'');
+    taxYearSelect.append(option);
+  }
+  taxYearSelect.value = String(currentTaxStart-1 >= 2020 ? currentTaxStart-1 : currentTaxStart);
+  function htmlEscape(value) {
+    return String(value ?? '').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  }
+  function downloadReport(content,filename) {
+    const blob = new Blob([content],{type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href=url; link.download=filename; document.body.append(link); link.click(); link.remove();
+    URL.revokeObjectURL(url);
+  }
+  taxReportButton.addEventListener('click',async()=>{
+    taxReportButton.disabled=true; status.textContent='Preparing annual tax report…';
+    try {
+      const {report} = await api({action:'tax-year-report',startYear:Number(taxYearSelect.value)});
+      const rows = (report.orders||[]).map(order=>'<tr><td>'+htmlEscape(order.order_reference)+'</td><td>'+htmlEscape(new Date(order.ordered_at).toLocaleDateString('en-GB',{timeZone:'Europe/London'}))+'</td><td>'+htmlEscape(order.customer_name)+'</td><td>'+htmlEscape((Array.isArray(order.items)?order.items:[]).map(item=>String(item.quantity??1)+' × '+String(item.name||'')).join('; '))+'</td><td>£'+(Number(order.total_pence)/100).toFixed(2)+'</td></tr>').join('');
+      const enquiries = (report.enquiries||[]).map(item=>'<tr><td>'+htmlEscape(item.reference)+'</td><td>'+htmlEscape(new Date(item.created_at).toLocaleDateString('en-GB',{timeZone:'Europe/London'}))+'</td><td>'+htmlEscape(item.status)+'</td></tr>').join('');
+      const year = Number(report.start_year);
+      const document = '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cakes by Sharn UK tax-year report '+year+'–'+(year+1)+'</title><style>body{font:14px Arial,sans-serif;color:#173f39;max-width:1100px;margin:36px auto;padding:0 20px}h1,h2{color:#087d7b}table{width:100%;border-collapse:collapse;margin:20px 0}td,th{border-bottom:1px solid #d8e9e5;text-align:left;padding:10px;vertical-align:top}th{background:#e9f7f4}.note{background:#fff4df;padding:15px;line-height:1.6}.summary{font-size:18px;font-weight:bold}@media print{body{margin:10mm}}</style></head><body><h1>Cakes by Sharn — annual tax-year report</h1><p>UK tax year: 6 April '+year+' to 5 April '+(year+1)+' (Europe/London)</p><p>Generated: '+htmlEscape(new Date().toLocaleString('en-GB',{timeZone:'Europe/London'}))+'</p><p class="summary">Orders: '+Number(report.order_count)+' · Total agreed charges: £'+(Number(report.agreed_order_total_pence)/100).toFixed(2)+'</p><div class="note"><strong>Bookkeeping working paper — not a tax return.</strong> These are agreed order charges grouped by order creation date, not confirmed receipts. The system does not record payments, expenses, refunds or VAT. Reconcile against invoices, bank statements and expenses, and apply the correct accounting basis before filing.</div><h2>Approved orders</h2><table><thead><tr><th>Reference</th><th>Created</th><th>Customer</th><th>Items</th><th>Agreed charge</th></tr></thead><tbody>'+rows+'</tbody></table><h2>Enquiry audit register</h2><p>'+Number((report.enquiries||[]).length)+' enquiries recorded in this tax year.</p><table><thead><tr><th>Reference</th><th>Received</th><th>Status</th></tr></thead><tbody>'+enquiries+'</tbody></table></body></html>';
+      downloadReport(document,'cakes-by-sharn-tax-year-'+year+'-'+(year+1)+'.html');
+      status.textContent='Annual report prepared. Open the downloaded HTML document in a browser to print or save as PDF.';
+    } catch(error) {status.textContent='Tax report failed: '+error.message;}
+    finally {taxReportButton.disabled=false;}
+  });
   const accountingExport = document.querySelector('#admin-export-accounting');
   function safeCsvCell(value) {
     let text = String(value ?? '').replace(/\r\n?/g, '\n');

@@ -20,6 +20,13 @@ Deno.serve(async request => {
     if (adminError) throw adminError;
     if (!administrator) return respond({ error: 'Not authorised' }, 403);
     const input = await request.json();
+    if (input.action === 'tax-year-report') {
+      const year = Number(input.startYear);
+      if (!Number.isInteger(year) || year < 2020 || year > new Date().getUTCFullYear()) return respond({ error: 'Invalid tax year' }, 400);
+      const { data: report, error: reportError } = await database.rpc('admin_tax_year_report', {p_start_year: year});
+      if (reportError) throw reportError;
+      return respond({ report });
+    }
     if (input.action === 'accounting-export') {
       const { data: records, error: exportError } = await database.rpc('admin_accounting_export');
       if (exportError) throw exportError;

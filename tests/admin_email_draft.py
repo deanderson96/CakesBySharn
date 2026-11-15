@@ -84,6 +84,18 @@ def test():
                                     {"month": "2026-%02d" % m, "enquiries": 3,
                                      "orders": 2, "approved": 2, "value_pence": 4250}
                                     for m in range(1, 13)]}}
+                        elif action == "tax-year-report":
+                            year = json.loads(route.request.post_data or "{}").get("startYear",2025)
+                            data = {"report": {"start_year": year, "order_count": 1,
+                                "agreed_order_total_pence": 2500,
+                                "orders": [{"order_reference": "CBS-TAX-1",
+                                            "ordered_at": "2025-05-12T11:00:00Z",
+                                            "customer_name": "Test <Customer>",
+                                            "items": [{"quantity": 2, "name": "Lemon loaf"}],
+                                            "total_pence": 2500}],
+                                "enquiries": [{"reference": "CBS-ENQ-1",
+                                               "created_at": "2025-05-12T11:00:00Z",
+                                               "status": "confirmed"}]}}
                         elif action == "accounting-export":
                             data = {"orders": [{
                                 "order_reference": "CBS-ORD-ARCHIVED",
@@ -140,6 +152,15 @@ def test():
                     assert "CBS-ORD-ARCHIVED" in csv_text
                     assert "'=2+2" in csv_text, "CSV formula injection was not escaped"
                     assert "25.00" in csv_text
+                    with page.expect_download() as tax_download_info:
+                        page.locator("#admin-tax-report").click()
+                    tax_download = tax_download_info.value
+                    assert tax_download.suggested_filename.startswith("cakes-by-sharn-tax-year-")
+                    with open(tax_download.path(), "r", encoding="utf-8") as tax_file:
+                        tax_html = tax_file.read()
+                    assert "6 April" in tax_html and "5 April" in tax_html
+                    assert "£25.00" in tax_html
+                    assert "Test &lt;Customer&gt;" in tax_html
                     assert page.locator(".admin-record").count() == 1
                     assert page.locator(".admin-state-confirmed").inner_text() == "Approved"
                     assert not errors, (engine, errors)
