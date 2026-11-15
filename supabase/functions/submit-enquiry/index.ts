@@ -1,4 +1,4 @@
-import { cors, respond, db, sendEmail } from '../_shared/common.ts';
+import { cors, respond, db } from '../_shared/common.ts';
 const catalog: Record<string, { name: string; price: number | null; type: string }> = {
   'afternoon-tea:0': { name: 'Individual afternoon tea', price: 900, type: 'fixed' },
   'afternoon-tea:1': { name: 'Afternoon tea for 2', price: 1600, type: 'fixed' },
@@ -26,6 +26,8 @@ Deno.serve(async request => {
   try {
     if (Number(request.headers.get('content-length') || 0) > 16000) return respond({ error: 'Request too large' }, 413);
     const input = await request.json();
+    // Invisible field catches simple form-filling bots without exposing an error.
+    if (String(input.website || '').trim()) return respond({ error: 'Unable to submit enquiry right now' }, 400);
     const name = String(input.name || '').trim(), email = String(input.email || '').trim();
     const date = String(input.preferredDate || '');
     const notes = String(input.notes || '').trim();
@@ -41,20 +43,20 @@ Deno.serve(async request => {
       return { key: entry.key, name: product.name, quantity: entry.quantity, estimatedUnitPence: product.price, priceType: product.type };
     });
     if (!items.length && notes.length < 10) return respond({ error: 'Select items or describe your request' }, 400);
-    const { data, error } = await db().from('enquiries').insert({
+    // A rolling per-email limit provides basic abuse mitigation. No raw email is stored in the limiter.
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(email.toLowerCase()));
+    const key = Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('');
+    const database = db();
+    const { data: permitted, error: rateError } = await database.rpc('check_enquiry_rate_limit', { p_key: key });
+    if (rateError) throw rateError;
+    if (!permitted) return respond({ error: 'Too many enquiries from this email address. Please try again later or contact us through Hotmail.' }, 429);
+    const { data, error } = await database.from('enquiries').insert({
       customer_name: name, customer_email: email, preferred_date: date, fulfilment,
       delivery_address: fulfilment === 'delivery' ? address : null, notes, items
     }).select('reference').single();
     if (error) throw error;
-    // The enquiry remains stored if mail delivery fails. Never claim it is confirmed.
-    const details = items.map((i: { quantity: number; name: string }) => '- ' + i.quantity + ' × ' + i.name).join('\n') || 'Custom request';
-    const body = 'Reference: ' + data.reference + '\nName: ' + name + '\nEmail: ' + email + '\nPreferred date: ' + date + '\nFulfilment: ' + fulfilment + '\nAddress: ' + (fulfilment === 'delivery' ? address : 'Collection') + '\nItems:\n' + details + '\nNotes: ' + notes;
-    const notifications = await Promise.allSettled([
-      sendEmail(Deno.env.get('SHARN_EMAIL')!, 'New enquiry ' + data.reference, body),
-      sendEmail(email, 'Cakes by Sharn enquiry received: ' + data.reference, 'Thanks for your enquiry!\n\n' + body + '\n\nSharn will confirm availability, date and final price. This is not a confirmed order.')
-    ]);
-    if (notifications.some(x => x.status === 'rejected')) console.error('Enquiry email delivery failed', data.reference);
-    return respond({ reference: data.reference, acknowledgmentEmailSent: notifications[1].status === 'fulfilled' }, 201);
+    // Email is handled manually through Hotmail/WhatsApp until a sender is configured.
+    return respond({ reference: data.reference, acknowledgmentEmailSent: false }, 201);
   } catch (error) {
     console.error(error);
     return respond({ error: 'Unable to submit enquiry right now' }, 500);

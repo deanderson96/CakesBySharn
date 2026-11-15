@@ -380,7 +380,7 @@ document.querySelector('#submit-online-enquiry').addEventListener('click', async
       headers: { 'Content-Type': 'application/json', apikey: orderConfig.supabaseAnonKey },
       body: JSON.stringify({ name, email, preferredDate, fulfilment,
         deliveryAddress: fulfilment === 'delivery' ? deliveryAddress : null,
-        notes: notesField.value.trim(),
+        notes: notesField.value.trim(), website: document.querySelector('#enquiry-website').value,
         items: Object.entries(cart).filter(([key]) => ITEM_LOOKUP.has(key)).map(([key, quantity]) => ({ key, quantity }))
       })
     });
@@ -388,7 +388,7 @@ document.querySelector('#submit-online-enquiry').addEventListener('click', async
     if (!response.ok) throw new Error(result.error || 'Unable to send enquiry.');
     const acknowledgment = result.acknowledgmentEmailSent === true
       ? 'You should receive an acknowledgment email shortly. Please check your junk or spam folder if it does not arrive.'
-      : 'An acknowledgment email could not be sent automatically. Please save your reference; our team will contact you using the email address provided.';
+      : 'Automatic acknowledgment emails are not available yet. Please save your reference; our team will contact you by email or WhatsApp after reviewing your request.';
     status.textContent = 'Enquiry received! Thank you for contacting Cakes by Sharn. Your reference: ' + result.reference + '. ' + acknowledgment + ' This is not yet a confirmed order. Our team will review availability, pricing and the next steps.';
   } catch (error) {
     status.textContent = error.message + ' Please use the email enquiry option below instead.';

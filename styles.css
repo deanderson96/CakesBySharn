@@ -528,3 +528,6 @@ h2 em { font-size: 1.08em; }
   #admin-dashboard section form { display:grid; grid-template-columns:minmax(0,1fr); }
   #admin-dashboard section form label { width:100%; }
 }
+
+/* Hidden spam-trap field: never visually expose to normal customers. */
+.enquiry-honeypot { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }

@@ -157,3 +157,11 @@ The admin portal supports multiple **individual** Supabase Auth email/password a
 4. Use `admin.html` for each administrator's own email/password sign-in. The server records `reviewed_by`, `approved_by`, `recorded_by`, and `customer_notified_by` Auth UUIDs on the relevant records.
 
 **Limitations:** No account invitation/management UI has been built; an authorised Supabase project owner must provision or revoke admin access. No real administrator has been added yet. The public online enquiry form remains disabled pending spam protection and acknowledgment delivery decisions.
+
+## Hotmail/manual launch mode
+
+The public `submit-enquiry` Edge Function stores a pending enquiry and returns its reference **without sending any email**. The customer sees an on-screen receipt explicitly stating automatic acknowledgment email is unavailable. Sharn's team checks the private dashboard and sends all correspondence manually through Hotmail or WhatsApp. The admin portal records manually sent replies and order notifications.
+
+The public endpoint includes an invisible honeypot and an atomic rolling rate limit of **three attempts per email address per hour**, keyed by a SHA-256 digest rather than raw email. This is basic abuse mitigation, **not** CAPTCHA or comprehensive IP-based anti-bot protection. Monitor spam and consider Turnstile before wider promotion. Enquiries are not orders; admin approval creates a separate order record.
+
+The site is enabled through `order-config.js` once the public Edge Function has been deployed. A live end-to-end browser test with a test customer is still required before relying on submissions.
