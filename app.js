@@ -77,6 +77,7 @@ const toastElement = document.querySelector('#toast');
 let activeFilter = 'all';
 let toastTimer;
 let previousFocus = null;
+let enquiryPageScrollY = 0;
 
 const ITEM_LOOKUP = new Map(
   MENU.flatMap(group => group.items.map((item, index) => [`${group.id}:${index}`, { ...item, group: group.title }]))
@@ -196,24 +197,33 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('scroll', syncEnquiryViewport);
 }
 window.addEventListener('resize', syncEnquiryViewport);
+// Keep focus scrolling inside the enquiry panel only, never the document.
 drawer.addEventListener('focusin', event => {
   if (!event.target.matches('input, textarea')) return;
-  // Wait for the virtual keyboard to finish changing the viewport.
   window.setTimeout(() => {
     if (!drawer.classList.contains('open') || !drawer.contains(event.target)) return;
     syncEnquiryViewport();
-    event.target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
-  }, 250);
+    const body = drawer.querySelector('.drawer-body');
+    const field = event.target.getBoundingClientRect();
+    const area = body.getBoundingClientRect();
+    if (field.bottom > area.bottom - 16) body.scrollTop += field.bottom - area.bottom + 16;
+    else if (field.top < area.top + 12) body.scrollTop -= area.top + 12 - field.top;
+  }, 300);
 });
 
 function openDrawer() {
   previousFocus = document.activeElement;
+  enquiryPageScrollY = window.scrollY;
+  if (window.matchMedia('(max-width: 600px)').matches) {
+    document.documentElement.classList.add('enquiry-locked');
+    document.body.style.top = `-${enquiryPageScrollY}px`;
+  }
   backdrop.hidden = false;
   document.body.classList.add('drawer-open');
   drawer.setAttribute('aria-hidden', 'false');
   syncEnquiryViewport();
   requestAnimationFrame(() => { backdrop.classList.add('visible'); drawer.classList.add('open'); });
-  document.querySelector('#drawer-close').focus();
+  document.querySelector('#drawer-close').focus({ preventScroll: true });
 }
 function closeDrawer() {
   drawer.classList.remove('open');
@@ -221,8 +231,11 @@ function closeDrawer() {
   backdrop.classList.remove('visible');
   drawer.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('drawer-open');
+  document.documentElement.classList.remove('enquiry-locked');
+  document.body.style.removeProperty('top');
+  if (window.matchMedia('(max-width: 600px)').matches) window.scrollTo(0, enquiryPageScrollY);
   window.setTimeout(() => { if (!drawer.classList.contains('open')) backdrop.hidden = true; }, 300);
-  if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus();
+  if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
 }
 function buildMessage() {
   const name = document.querySelector('#customer-name').value.trim();
