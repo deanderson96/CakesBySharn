@@ -162,6 +162,7 @@
     total.append(el('p', 'admin-estimate-note', qualifiers.join(' · ') + '. Not a final quote.'));
     items.append(total);
     if (enquiry.notes) items.append(detailLine('Customer requirements', enquiry.notes));
+    if (enquiry.auto_declined_at) items.append(detailLine('Review outcome', 'Automatically declined after 28 days without approval. Customer not automatically notified.'))
     panel.append(items);
     if (enquiry.replies && enquiry.replies.length) {
       const history = el('div', 'admin-detail-section');
@@ -300,7 +301,6 @@
     empty.hidden = matching.length > 0;
     document.querySelector('#admin-list-caption').textContent = matching.length + ' of ' + records.length + ' enquiries · Select a row to see details and actions';
   }
-  const reportingPeriod = document.querySelector('#admin-period');
   const analyticsCards = document.querySelector('#admin-analytics-cards');
   const activityChart = document.querySelector('#admin-activity-chart');
   const pipeline = document.querySelector('#admin-pipeline');
@@ -313,7 +313,7 @@
   }
   function renderStatistics() {
     if (!businessStatistics) return;
-    const period = businessStatistics.periods.find(item => item.months === Number(reportingPeriod.value));
+    const period = businessStatistics.periods.find(item => item.months === 6);
     if (!period) return;
     const conversion = period.enquiries ? (period.orders / period.enquiries * 100).toFixed(1) + '%' : '—';
     const average = period.orders ? money(Math.round(period.approved_value_pence / period.orders)) : '—';
@@ -343,7 +343,7 @@
       row.append(el('span','',label),el('strong','',String(count)));
       contactBreakdown.append(row);
     });
-    const months = businessStatistics.monthly.slice(-Number(reportingPeriod.value));
+    const months = businessStatistics.monthly.slice(-6);
     activityChart.replaceChildren();
     const max = Math.max(1,...months.flatMap(item => [item.enquiries,item.orders]));
     months.forEach(item => {
@@ -360,7 +360,6 @@
     });
     activityChart.setAttribute('aria-label',months.map(item => item.month + ': ' + item.enquiries + ' enquiries and ' + item.orders + ' orders').join('; '));
   }
-  reportingPeriod.addEventListener('change',renderStatistics);
   function renderMetrics() {
     const stats = [
       ['Total enquiries',records.length,'all'],

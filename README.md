@@ -174,3 +174,15 @@ Run `python tests/live_submission.py` from an environment with internet access t
 The customer chooses **email**, **SMS/text** or **WhatsApp**. Email is required and format-checked only for email enquiries; UK mobiles are required and normalized to +447... for SMS/WhatsApp. Server validation and database CHECK constraints enforce this as well. Existing email-only enquiries and orders remain valid. SMS and WhatsApp actions open the administrator's own messaging app; no automatic messages are sent or implied. Administrators must send manually and then explicitly record notification. SMS deep links depend on the device having an SMS app; a copy-message action is available.
 
 The admin dashboard has searchable, filterable compact rows that expand into full enquiry details, reply history, approval/decline controls and order notification actions. The public storefront uses hover and scroll reveal transitions with reduced-motion support.
+
+## Six-month reporting and automated retention (November 2026)
+The private operations dashboard shows one fixed rolling six-month reporting period. Business statistics remain restricted to active administrators via `admin_business_statistics()`.
+
+Supabase Cron runs `select public.run_enquiry_retention(false)` every day at **02:15 UTC** (`cakes-by-sharn-enquiry-retention`). The job:
+- Automatically declines pending enquiries more than 28 days old and sets `auto_declined_at`. It does **not** notify the customer.
+- Permanently removes automatically declined enquiries three calendar months after original submission.
+- Permanently removes manually declined enquiries six calendar months after original submission.
+- Permanently removes orders one calendar year after order creation and removes their associated approved enquiry once no order references it. Enquiry replies are deleted via FK cascade.
+- Writes only aggregate counts (not personal data) to `enquiry_retention_runs` for operational auditing.
+
+A dry run is available to database operators with `select public.run_enquiry_retention(true);`. The live function is restricted from public and authenticated API callers. The cron job is database-native; it does not depend on website visits. Deletion is irreversible in the application. Review legal/accounting recordkeeping obligations before relying on this as the sole order archive; the dashboard does not currently store payments or expenses.

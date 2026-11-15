@@ -118,10 +118,8 @@ def test():
                     assert "£21.50" in page.locator(".admin-order-section").inner_text()
                     assert page.locator(".admin-analytics-stat").count() == 8
                     assert "£42.50" in page.locator("#admin-analytics-cards").inner_text()
-                    page.locator("#admin-period").select_option("12")
-                    assert page.locator(".admin-chart-month").count() == 12
-                    page.locator("#admin-period").select_option("3")
-                    assert page.locator(".admin-chart-month").count() == 3
+                    assert page.locator(".admin-chart-month").count() == 6
+                    assert page.locator("#admin-period").count() == 0
                     assert page.locator(".admin-record").count() == 1
                     assert page.locator(".admin-state-confirmed").inner_text() == "Approved"
                     assert not errors, (engine, errors)
