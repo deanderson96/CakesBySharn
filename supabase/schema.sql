@@ -23,3 +23,15 @@ alter table public.enquiries enable row level security;
 -- No browser-accessible policies: only service-role Edge Functions access customer data.
 revoke all on public.enquiries from anon, authenticated;
 create index if not exists enquiries_status_date_idx on public.enquiries(status, preferred_date);
+
+-- Private audit trail of Sharn's replies to customers.
+create table if not exists public.enquiry_replies (
+  id uuid primary key default gen_random_uuid(),
+  enquiry_id uuid not null references public.enquiries(id) on delete cascade,
+  sent_at timestamptz not null default now(),
+  message text not null check (char_length(message) between 1 and 2000)
+);
+alter table public.enquiry_replies enable row level security;
+revoke all on public.enquiry_replies from anon, authenticated;
+create index if not exists enquiry_replies_enquiry_date_idx
+  on public.enquiry_replies(enquiry_id, sent_at);

@@ -46,6 +46,48 @@
         const notes = document.createElement('p');
         notes.textContent = 'Requirements: ' + enquiry.notes + (enquiry.delivery_address ? ' | Address: ' + enquiry.delivery_address : '');
         section.append(notes);
+        if (Array.isArray(enquiry.replies) && enquiry.replies.length) {
+          const history = document.createElement('details');
+          const summary = document.createElement('summary');
+          summary.textContent = 'Replies sent (' + enquiry.replies.length + ')';
+          history.append(summary);
+          for (const entry of enquiry.replies) {
+            const sent = document.createElement('p');
+            sent.textContent = new Date(entry.sent_at).toLocaleString('en-GB') + ': ' + entry.message;
+            history.append(sent);
+          }
+          section.append(history);
+        }
+        const replyForm = document.createElement('form');
+        replyForm.className = 'admin-reply-form';
+        const replyLabel = document.createElement('label');
+        replyLabel.textContent = 'Reply to customer (does not confirm an order)';
+        const replyText = document.createElement('textarea');
+        replyText.rows = 3;
+        replyText.maxLength = 2000;
+        replyText.required = true;
+        replyText.placeholder = 'Answer questions or ask for more information…';
+        replyLabel.append(replyText);
+        const replyButton = document.createElement('button');
+        replyButton.type = 'submit';
+        replyButton.textContent = 'Send reply by email';
+        replyButton.className = 'button button-outline';
+        replyForm.append(replyLabel, replyButton);
+        replyForm.addEventListener('submit', async event => {
+          event.preventDefault();
+          if (!replyForm.reportValidity()) return;
+          if (!window.confirm('Send this reply to ' + enquiry.customer_email + '? The order status will not change.')) return;
+          replyButton.disabled = true;
+          status.textContent = 'Sending reply to ' + enquiry.reference + '…';
+          try {
+            await api({ action: 'reply', id: enquiry.id, message: replyText.value.trim() });
+            await refresh();
+          } catch (error) {
+            status.textContent = error.message;
+            replyButton.disabled = false;
+          }
+        });
+        section.append(replyForm);
         if (enquiry.status === 'pending') {
           const form = document.createElement('form');
           const [dateWrap, date] = field('Confirmed date', 'date');

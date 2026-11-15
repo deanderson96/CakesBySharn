@@ -8,19 +8,48 @@ Deno.serve(async request => {
     if (!bearer.startsWith('Bearer ')) return respond({ error: 'Sign in required' }, 401);
     const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
     const { data: { user }, error } = await client.auth.getUser(bearer.slice(7));
-    if (error || !user || user.email?.toLowerCase() !== Deno.env.get('ADMIN_EMAIL')?.toLowerCase()) return respond({ error: 'Not authorised' }, 403);
+    const allowedEmail = (Deno.env.get('ADMIN_EMAIL') || '').trim().toLowerCase();
+    if (error || !user?.email || !allowedEmail || user.email.trim().toLowerCase() !== allowedEmail) return respond({ error: 'Not authorised' }, 403);
     const input = await request.json();
     const database = db();
     if (input.action === 'list') {
       const { data, error } = await database.from('enquiries').select('*').order('created_at', { ascending: false }).limit(100);
       if (error) throw error;
-      return respond({ enquiries: data });
+      const records = data || [];
+      if (!records.length) return respond({ enquiries: [] });
+      const { data: replies, error: repliesError } = await database.from('enquiry_replies')
+        .select('enquiry_id,sent_at,message')
+        .in('enquiry_id', records.map(enquiry => enquiry.id))
+        .order('sent_at', { ascending: true });
+      if (repliesError) throw repliesError;
+      return respond({ enquiries: records.map(enquiry => ({
+        ...enquiry,
+        replies: (replies || []).filter(reply => reply.enquiry_id === enquiry.id)
+      })) });
     }
-    if (input.action !== 'confirm' && input.action !== 'decline') return respond({ error: 'Invalid action' }, 400);
+    if (!['reply', 'confirm', 'decline'].includes(input.action)) return respond({ error: 'Invalid action' }, 400);
     const id = String(input.id || '');
     if (!/^[0-9a-f-]{36}$/i.test(id)) return respond({ error: 'Invalid reference' }, 400);
     const { data: enquiry, error: readError } = await database.from('enquiries').select('*').eq('id', id).single();
     if (readError || !enquiry) return respond({ error: 'Enquiry not found' }, 404);
+    if (input.action === 'reply') {
+      const reply = String(input.message || '').trim();
+      if (reply.length < 1 || reply.length > 2000) return respond({ error: 'Write a message of up to 2,000 characters' }, 400);
+      // A reply is not an approval and does not change the enquiry status.
+      await sendEmail(enquiry.customer_email,
+        'Cakes by Sharn: message about ' + enquiry.reference,
+        'Hello ' + enquiry.customer_name + ',\n\n' + reply +
+        '\n\nEnquiry reference: ' + enquiry.reference +
+        '\nYour enquiry remains ' + enquiry.status + '.\n\nCakes by Sharn');
+      const { error: replyError } = await database.from('enquiry_replies').insert({
+        enquiry_id: enquiry.id, message: reply
+      });
+      if (replyError) {
+        console.error('Reply sent but log could not be stored for', enquiry.reference, replyError.message);
+        return respond({ error: 'Email may have been sent, but the reply could not be recorded. Check before retrying.' }, 502);
+      }
+      return respond({ sent: true });
+    }
     if (enquiry.status !== 'pending') return respond({ error: 'Enquiry already processed' }, 409);
     const confirm = input.action === 'confirm';
     const confirmedDate = String(input.confirmedDate || '');

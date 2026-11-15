@@ -87,8 +87,10 @@ Browser automation is **not** a substitute for testing an actual email app on a 
 
 - `supabase/schema.sql`: private enquiries table with row-level security and no public read/write grants.
 - `supabase/functions/submit-enquiry/index.ts`: validates requests, creates a pending enquiry, sends Sharn an email and sends the customer an acknowledgement. This acknowledgement **does not confirm an order**.
-- `supabase/functions/manage-enquiries/index.ts`: authenticates Sharn's Supabase account, restricts access by `ADMIN_EMAIL`, lists enquiries and confirms/declines with an email to the customer.
-- `admin.html`: password-protected dashboard for Sharn to review enquiries and enter the actual total, date and collection/delivery time. Do not rely on the URL being secret.
+- `supabase/functions/manage-enquiries/index.ts`: authenticates Sharn's Supabase account, restricts access by `ADMIN_EMAIL`, lists private enquiries, sends standalone customer replies, and confirms/declines orders with an email to the customer.
+- `public.enquiry_replies`: private record of successful replies, visible to Sharn in the dashboard; sending a reply never changes an order's status.
+- `supabase/config.toml`: documents function JWT verification settings (public submission endpoint only).
+- `admin.html`: password-protected dashboard for Sharn to review enquiries, reply by email, and enter the actual total, date and collection/delivery time. Do not rely on the URL being secret.
 - `order-config.js`: public project URL and **publishable** Supabase key only. Never commit a service-role key or Resend API key.
 
 ### Activation checklist
@@ -97,11 +99,27 @@ Browser automation is **not** a substitute for testing an actual email app on a 
 2. Create an email sender domain and verify it with Resend (or adapt `sendEmail` for another transactional provider).
 3. In Supabase Auth, create **only Sharn's** admin user with a strong password, and disable open public sign-ups. Use the exact email in `ADMIN_EMAIL`. Consider MFA.
 4. Set Edge Function secrets: `RESEND_API_KEY`, `EMAIL_FROM` (verified sender, e.g. `orders@your-verified-domain`), `SHARN_EMAIL=cakesbysharnx@hotmail.com`, `ADMIN_EMAIL`, and `SITE_ORIGIN=https://deanderson96.github.io`. Supabase supplies its own `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` in supported deployments.
-5. Deploy both Edge Functions with JWT verification **disabled only for `submit-enquiry`** (public form); keep JWT verification enabled for `manage-enquiries`. The manage function additionally verifies the bearer token and exact admin email.
+5. Deploy both Edge Functions using the checked-in `supabase/config.toml`: JWT verification **disabled only for `submit-enquiry`** (public form); leave it enabled for `manage-enquiries`. The management function additionally checks the user session and exact configured admin email. No client can read the enquiries table directly.
 6. Add the Supabase project URL and public anon/publishable key to `order-config.js`, then publish the website.
-7. Test submission, acknowledgement, Sharn notification, confirmation and decline using a test customer address, including delivery and collection. Confirm mail delivery and review spam/abuse protections before public launch.
+7. Test submission, acknowledgement, Sharn notification, **reply without approving**, confirmation and decline using a test customer address, including delivery and collection. Confirm mail delivery and review spam/abuse protections before public launch.
 8. Configure rate limiting, CAPTCHA/bot mitigation and monitoring on the public function before enabling it for real customers. Restrict email sender and verify data protection/privacy notices and retention policy for names, addresses and order details.
 
 **Important:** The confirmation sends the final amount entered by Sharn, and the chosen date/time. It does not charge a customer or collect payment. Where the final amount or date differs from the customer's request, Sharn should obtain customer acceptance before confirming. If an email delivery fails, an enquiry remains stored for manual follow-up; check logs and delivery status. The basic prototype does not provide exactly-once notification delivery under simultaneous admin actions; use an outbox/queue before higher-volume production use.
 
 The customer form shows a direct online submit button only when `order-config.js` contains both public settings. The existing email and WhatsApp draft options remain as fallbacks.
+
+### What Sharn can do in the private dashboard
+
+After setup, Sharn will sign in at `/CakesBySharn/admin.html`, see the latest enquiries and their reference numbers, and choose any of:
+
+- **Reply by email**: answer a question or request information; the enquiry remains pending, confirmed or declined as before. The message is saved in the private replies history only after the email provider accepts it.
+- **Confirm and email customer**: specify the final price, date, collection/delivery time and any note. The customer receives a confirmation email.
+- **Decline and email customer**: send a decline message, without taking a payment.
+
+These actions require the designated Supabase Auth user and the `ADMIN_EMAIL` server secret. The public website never receives private database credentials.
+
+### Customer information and launch safeguards
+
+The online form handles personal data, including names, email addresses, dates, and potentially home addresses. Before activation, Sharn should approve a proper privacy notice with the business identity, purpose and lawful basis of processing, retention/deletion process, third-party processors and data rights contact. The short notice on the site is informative but **is not a complete privacy policy**. Avoid collecting unnecessary personal or sensitive information. Access to customer details must stay limited to the authorised admin.
+
+Do not publish real online submissions until email sender/domain verification, anti-spam protection, function deployment and full end-to-end testing are complete. Do not paste Supabase database passwords, service role keys or email API tokens into GitHub or this site's public configuration. The project URL and *publishable* API key are designed to be public.

@@ -1,0 +1,9 @@
+# Supabase Edge Function authentication settings.
+# The submission function is public: enforce validation and anti-abuse measures in code.
+[functions.submit-enquiry]
+verify_jwt = false
+
+# The management function requires Sharn's authenticated user JWT
+# and independently checks the exact email against the ADMIN_EMAIL secret.
+[functions.manage-enquiries]
+verify_jwt = true
