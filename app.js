@@ -77,7 +77,7 @@ const toastElement = document.querySelector('#toast');
 let activeFilter = 'all';
 let toastTimer;
 let previousFocus = null;
-let enquiryPageScrollY = 0;
+
 
 const ITEM_LOOKUP = new Map(
   MENU.flatMap(group => group.items.map((item, index) => [`${group.id}:${index}`, { ...item, group: group.title }]))
@@ -181,59 +181,22 @@ function updateQuantity(key, amount) {
   saveCart();
   renderBasket();
 }
-// On mobile, iOS/Android keyboards shrink the visual viewport without reliably
-// changing fixed-position element sizing. Match the drawer to that visible area.
-function syncEnquiryViewport() {
-  if (!drawer.classList.contains('open') || !window.matchMedia('(max-width: 600px)').matches) {
-    drawer.style.removeProperty('--enquiry-viewport-height');
-    return;
-  }
-  const viewport = window.visualViewport;
-  const height = viewport ? viewport.height : window.innerHeight;
-  drawer.style.setProperty('--enquiry-viewport-height', `${Math.round(height)}px`);
-}
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', syncEnquiryViewport);
-  window.visualViewport.addEventListener('scroll', syncEnquiryViewport);
-}
-window.addEventListener('resize', syncEnquiryViewport);
-// Keep focus scrolling inside the enquiry panel only, never the document.
-drawer.addEventListener('focusin', event => {
-  if (!event.target.matches('input, textarea')) return;
-  window.setTimeout(() => {
-    if (!drawer.classList.contains('open') || !drawer.contains(event.target)) return;
-    syncEnquiryViewport();
-    const body = drawer.querySelector('.drawer-body');
-    const field = event.target.getBoundingClientRect();
-    const area = body.getBoundingClientRect();
-    if (field.bottom > area.bottom - 16) body.scrollTop += field.bottom - area.bottom + 16;
-    else if (field.top < area.top + 12) body.scrollTop -= area.top + 12 - field.top;
-  }, 300);
-});
-
 function openDrawer() {
   previousFocus = document.activeElement;
-  enquiryPageScrollY = window.scrollY;
-  if (window.matchMedia('(max-width: 600px)').matches) {
-    document.documentElement.classList.add('enquiry-locked');
-    document.body.style.top = `-${enquiryPageScrollY}px`;
-  }
   backdrop.hidden = false;
   document.body.classList.add('drawer-open');
   drawer.setAttribute('aria-hidden', 'false');
-  syncEnquiryViewport();
-  requestAnimationFrame(() => { backdrop.classList.add('visible'); drawer.classList.add('open'); });
-  document.querySelector('#drawer-close').focus({ preventScroll: true });
+  requestAnimationFrame(() => {
+    backdrop.classList.add('visible');
+    drawer.classList.add('open');
+    document.querySelector('#drawer-close').focus({ preventScroll: true });
+  });
 }
 function closeDrawer() {
   drawer.classList.remove('open');
-  drawer.style.removeProperty('--enquiry-viewport-height');
   backdrop.classList.remove('visible');
   drawer.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('drawer-open');
-  document.documentElement.classList.remove('enquiry-locked');
-  document.body.style.removeProperty('top');
-  if (window.matchMedia('(max-width: 600px)').matches) window.scrollTo(0, enquiryPageScrollY);
   window.setTimeout(() => { if (!drawer.classList.contains('open')) backdrop.hidden = true; }, 300);
   if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
 }
