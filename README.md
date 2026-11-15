@@ -186,3 +186,10 @@ Supabase Cron runs `select public.run_enquiry_retention(false)` every day at **0
 - Writes only aggregate counts (not personal data) to `enquiry_retention_runs` for operational auditing.
 
 A dry run is available to database operators with `select public.run_enquiry_retention(true);`. The live function is restricted from public and authenticated API callers. The cron job is database-native; it does not depend on website visits. Deletion is irreversible in the application. Review legal/accounting recordkeeping obligations before relying on this as the sole order archive; the dashboard does not currently store payments or expenses.
+
+## Private accounting archive and CSV export
+The daily retention job now **archives eligible approved orders before deleting them**. The archive lives in the non-exposed `accounting.order_archive` schema/table. It preserves order reference, order creation timestamp, customer name, item details, agreed price, fulfilment and agreed date; it deliberately omits customer email/mobile, delivery address, message history and internal notes. The archive operation and operational deletion run in a single database transaction: a failed archive prevents deletion. Archived records are not visible in the ordinary Enquiries & Orders list or the rolling six-month statistics.
+
+The dashboard's **Export accounting CSV** action calls `admin_accounting_export()` through the JWT-verified, allowlisted admin Edge Function. It exports both current and archived approved orders. The CSV quotes fields, escapes spreadsheet formula prefixes and includes UTF-8 BOM for spreadsheet compatibility. Treat downloaded files as confidential accounting records; store them in a secure, backed-up location. Neither the archive nor the export is a payment ledger or invoice generator, and the database archive alone is not an independent off-site backup.
+
+The archive has no automatic expiry until a retention policy appropriate to the business's tax/accounting obligations has been agreed. Reconcile accounting exports with bank statements, payment receipts and issued invoices; retain required source documents separately.

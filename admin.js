@@ -32,6 +32,42 @@
     return [wrap, input];
   }
 
+  const accountingExport = document.querySelector('#admin-export-accounting');
+  function safeCsvCell(value) {
+    let text = String(value ?? '').replace(/\r\n?/g, '\n');
+    if (/^[\s]*[=+@\-\t]/.test(text)) text = "'" + text;
+    return '"' + text.replace(/"/g, '""') + '"';
+  }
+  accountingExport.addEventListener('click', async () => {
+    accountingExport.disabled = true;
+    status.textContent = 'Preparing accounting export…';
+    try {
+      const result = await api({action:'accounting-export'});
+      const header = ['Order reference','Order created','Customer','Items','Agreed total GBP','Fulfilment','Agreed date','Archived'];
+      const rows = (result.orders || []).map(order => [
+        order.order_reference,
+        order.order_created_at,
+        order.customer_name,
+        (Array.isArray(order.items) ? order.items : []).map(item => String(item.quantity ?? 1) + ' x ' + String(item.name || '')).join('; '),
+        (Number(order.agreed_total_pence) / 100).toFixed(2),
+        order.fulfilment,
+        order.agreed_date,
+        order.archived ? 'Yes' : 'No'
+      ]);
+      const csv = '\uFEFF' + [header,...rows].map(row => row.map(safeCsvCell).join(',')).join('\r\n') + '\r\n';
+      const blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'cakes-by-sharn-accounting-' + new Date().toISOString().slice(0,10) + '.csv';
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      status.textContent = 'Accounting CSV prepared with ' + rows.length + ' current and archived orders. Store it securely.';
+    } catch(error) { status.textContent = 'Export failed: ' + error.message; }
+    finally { accountingExport.disabled = false; }
+  });
   const metrics = document.querySelector('#admin-metrics');
   const empty = document.querySelector('#admin-empty');
   const search = document.querySelector('#admin-search');

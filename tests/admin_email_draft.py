@@ -84,6 +84,17 @@ def test():
                                     {"month": "2026-%02d" % m, "enquiries": 3,
                                      "orders": 2, "approved": 2, "value_pence": 4250}
                                     for m in range(1, 13)]}}
+                        elif action == "accounting-export":
+                            data = {"orders": [{
+                                "order_reference": "CBS-ORD-ARCHIVED",
+                                "order_created_at": "2024-01-05T12:00:00Z",
+                                "customer_name": "=2+2",
+                                "items": [{"quantity": 2, "name": "Lemon loaf"}],
+                                "agreed_total_pence": 2500,
+                                "fulfilment": "collection",
+                                "agreed_date": "2024-01-10",
+                                "archived": True
+                            }]}
                         else:
                             data = FAKE_LIST
                         route.fulfill(status=200, content_type="application/json",
@@ -120,6 +131,15 @@ def test():
                     assert "£42.50" in page.locator("#admin-analytics-cards").inner_text()
                     assert page.locator(".admin-chart-month").count() == 6
                     assert page.locator("#admin-period").count() == 0
+                    with page.expect_download() as download_info:
+                        page.locator("#admin-export-accounting").click()
+                    download = download_info.value
+                    assert download.suggested_filename.startswith("cakes-by-sharn-accounting-")
+                    with open(download.path(), "r", encoding="utf-8-sig") as exported:
+                        csv_text = exported.read()
+                    assert "CBS-ORD-ARCHIVED" in csv_text
+                    assert "'=2+2" in csv_text, "CSV formula injection was not escaped"
+                    assert "25.00" in csv_text
                     assert page.locator(".admin-record").count() == 1
                     assert page.locator(".admin-state-confirmed").inner_text() == "Approved"
                     assert not errors, (engine, errors)
