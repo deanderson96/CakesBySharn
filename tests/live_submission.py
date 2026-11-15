@@ -41,20 +41,31 @@ with urlopen(preflight, timeout=25) as response:
         headers["Origin"], "*"), "CORS origin not allowed"
 print("PASS public API CORS preflight", flush=True)
 
-request = Request(endpoint, data=json.dumps(payload).encode("utf-8"),
-                  headers=headers, method="POST")
-try:
-    with urlopen(request, timeout=30) as response:
-        code = response.status
-        raw = response.read().decode("utf-8")
-except HTTPError as error:
-    detail = error.read().decode("utf-8")
-    raise AssertionError(f"Public enquiry API returned HTTP {error.code}: {detail}") from error
 
-print("Public API response:", code, raw, flush=True)
-assert code == 201, f"Expected HTTP 201, got {code}"
-result = json.loads(raw)
-assert re.fullmatch(r"CBS-[A-F0-9]{10}", result.get("reference", "")), result
-assert result.get("acknowledgmentEmailSent") is False, result
-print("PASS hosted enquiry submission; remove synthetic reference:",
-      result["reference"], flush=True)
+def submit(data):
+    request = Request(endpoint, data=json.dumps(data).encode("utf-8"),
+                      headers=headers, method="POST")
+    try:
+        with urlopen(request, timeout=30) as response:
+            return response.status, json.loads(response.read().decode("utf-8"))
+    except HTTPError as error:
+        return error.code, json.loads(error.read().decode("utf-8"))
+
+for method, suffix in (("email", "email"), ("sms", "sms"), ("whatsapp", "wa")):
+    data = dict(payload)
+    data["contactMethod"] = method
+    data["email"] = f"cbs-test-{run_id}@example.invalid" if method == "email" else None
+    data["mobile"] = None if method == "email" else ("07700 900123" if method == "sms" else "07700 900124")
+    code, result = submit(data)
+    print("Public API response", method, code, result, flush=True)
+    assert code == 201, (method, code, result)
+    assert re.fullmatch(r"CBS-[A-F0-9]{10}", result.get("reference", "")), result
+    assert result.get("acknowledgmentEmailSent") is False, result
+    print("PASS hosted " + method + " enquiry; remove synthetic reference:",
+          result["reference"], flush=True)
+
+invalid = dict(payload)
+invalid.update(contactMethod="sms", email=None, mobile="12345")
+code, result = submit(invalid)
+assert code == 400, ("invalid mobile accepted", code, result)
+print("PASS rejected invalid UK mobile", flush=True)

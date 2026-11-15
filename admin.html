@@ -1,12 +1,14 @@
 <!doctype html>
 <html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow"><title>Cakes by Sharn — Admin portal</title>
-<link rel="stylesheet" href="styles.css?v=phase1"><script defer src="order-config.js?v=1"></script><script defer src="admin.js?v=20261115b"></script></head>
-<body><main class="container" style="max-width:900px;padding:40px 16px">
-<h1>Cakes by Sharn — Enquiries &amp; Orders</h1><p>Private administration. Each authorised team member signs in with their own account.</p>
-<section id="admin-login"><form id="login-form"><label>Email <input id="admin-email" type="email" autocomplete="username" required></label>
-<label>Password <input id="admin-password" type="password" autocomplete="current-password" required></label>
-<button class="button button-primary" type="submit">Sign in</button></form></section>
-<section id="admin-dashboard" hidden><button id="admin-refresh" class="button button-outline">Refresh enquiries</button>
-<button id="admin-signout" class="button button-outline">Sign out</button><div id="admin-orders"></div></section>
-<p id="admin-status" role="status" aria-live="polite"></p></main></body></html>
+<meta name="robots" content="noindex,nofollow"><title>Enquiries & Orders | Cakes by Sharn</title>
+<link rel="stylesheet" href="styles.css?v=20261115c"><script defer src="order-config.js?v=1"></script><script defer src="admin.js?v=20261115c"></script></head>
+<body class="admin-page">
+<header class="admin-topbar"><div class="container admin-topbar-inner"><a class="admin-wordmark" href="index.html">Cakes by Sharn<span>✳</span></a><span class="admin-private-label">Private workspace</span></div></header>
+<main class="container admin-shell">
+<div class="admin-page-heading"><div><p class="eyebrow">Operations dashboard</p><h1>Enquiries <em>&</em> Orders</h1><p class="admin-muted">Review customer requests, agree the details and manage every order in one place.</p></div><div id="admin-session-actions" hidden><button id="admin-refresh" class="button button-outline" type="button">↻ Refresh</button> <button id="admin-signout" class="button button-outline" type="button">Sign out</button></div></div>
+<section id="admin-login" class="admin-login-card"><h2>Welcome back</h2><p class="admin-muted">Sign in with your own administrator account.</p><form id="login-form"><label>Email address<input id="admin-email" type="email" autocomplete="username" required></label><label>Password<input id="admin-password" type="password" autocomplete="current-password" required></label><button class="button button-primary" type="submit">Sign in securely</button></form></section>
+<section id="admin-dashboard" hidden>
+<div class="admin-metrics" id="admin-metrics" aria-label="Enquiry overview"></div>
+<div class="admin-list-card"><div class="admin-list-toolbar"><div><h2>Customer enquiries</h2><p class="admin-muted" id="admin-list-caption">Choose an enquiry to review its details and actions.</p></div><div class="admin-list-controls"><label for="admin-search" class="sr-only">Search enquiries</label><input id="admin-search" type="search" placeholder="Search name or reference" autocomplete="off"><label for="admin-filter" class="sr-only">Filter by status</label><select id="admin-filter"><option value="all">All statuses</option><option value="pending">Pending</option><option value="confirmed">Approved</option><option value="declined">Declined</option></select></div></div><div class="admin-list-head" aria-hidden="true"><span>Customer / reference</span><span>Requested</span><span>Contact</span><span>Status</span><span></span></div><div id="admin-orders" class="admin-records"></div><p id="admin-empty" class="admin-empty" hidden>No enquiries match your search.</p></div>
+</section>
+<p id="admin-status" class="admin-live-status" role="status" aria-live="polite"></p></main></body></html>

@@ -28,12 +28,22 @@ Deno.serve(async request => {
     const input = await request.json();
     // Invisible field catches simple form-filling bots without exposing an error.
     if (String(input.website || '').trim()) return respond({ error: 'Unable to submit enquiry right now' }, 400);
-    const name = String(input.name || '').trim(), email = String(input.email || '').trim();
+    const name = String(input.name || '').trim();
+    const contactMethod = String(input.contactMethod || 'email');
+    const email = String(input.email || '').trim();
+    const rawMobile = String(input.mobile || '').trim();
+    const compactMobile = rawMobile.replace(/[\s().-]/g, '');
+    const mobile = compactMobile.startsWith('07') ? '+44' + compactMobile.slice(1) : compactMobile;
+    if (!['email', 'sms', 'whatsapp'].includes(contactMethod)) return respond({ error: 'Choose a contact method.' }, 400);
+    if (name.length < 1 || name.length > 120) return respond({ error: 'Enter your name (up to 120 characters).' }, 400);
+    if (contactMethod === 'email' && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254))
+      return respond({ error: 'Enter a valid email address.' }, 400);
+    if (contactMethod !== 'email' && (rawMobile.length > 40 || !/^\+447[1-57-9]\d{8}$/.test(mobile)))
+      return respond({ error: 'Enter a valid UK mobile number, e.g. 07700 900123.' }, 400);
     const date = String(input.preferredDate || '');
     const notes = String(input.notes || '').trim();
     const fulfilment = input.fulfilment;
     const address = String(input.deliveryAddress || '').trim();
-    if (!name || name.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return respond({ error: 'Valid name and email required' }, 400);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date)) || date < new Date().toISOString().slice(0, 10)) return respond({ error: 'A future date is required' }, 400);
     if (!['collection', 'delivery'].includes(fulfilment) || (fulfilment === 'delivery' && (address.length < 10 || address.length > 500))) return respond({ error: 'Valid collection or delivery details required' }, 400);
     if (notes.length > 3000 || !Array.isArray(input.items) || input.items.length > 40) return respond({ error: 'Invalid enquiry' }, 400);
@@ -44,14 +54,17 @@ Deno.serve(async request => {
     });
     if (!items.length && notes.length < 10) return respond({ error: 'Select items or describe your request' }, 400);
     // A rolling per-email limit provides basic abuse mitigation. No raw email is stored in the limiter.
-    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(email.toLowerCase()));
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(contactMethod === 'email' ? 'email:' + email.toLowerCase() : 'mobile:' + mobile));
     const key = Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('');
     const database = db();
     const { data: permitted, error: rateError } = await database.rpc('check_enquiry_rate_limit', { p_key: key });
     if (rateError) throw rateError;
-    if (!permitted) return respond({ error: 'Too many enquiries from this email address. Please try again later or contact us through Hotmail.' }, 429);
+    if (!permitted) return respond({ error: 'Too many enquiries from this contact address or number. Please try again later.' }, 429);
     const { data, error } = await database.from('enquiries').insert({
-      customer_name: name, customer_email: email, preferred_date: date, fulfilment,
+      customer_name: name, contact_method: contactMethod,
+      customer_email: contactMethod === 'email' ? email : null,
+      customer_mobile: contactMethod === 'email' ? null : mobile,
+      preferred_date: date, fulfilment,
       delivery_address: fulfilment === 'delivery' ? address : null, notes, items
     }).select('reference').single();
     if (error) throw error;

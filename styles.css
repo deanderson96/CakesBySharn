@@ -531,3 +531,111 @@ h2 em { font-size: 1.08em; }
 
 /* Hidden spam-trap field: never visually expose to normal customers. */
 .enquiry-honeypot { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+
+/* Customer contact preference: hidden inputs must stay hidden even in flex/grid forms. */
+.form-field[hidden], #contact-mobile-field[hidden], #contact-email-field[hidden] { display:none!important; }
+.form-field small { display:block; margin-top:6px; font-size:12px; color:#5c726d; }
+input[aria-invalid="true"] { border-color:#ad4343!important; outline-color:#ad4343; }
+
+/* Private operations dashboard */
+.admin-page { background:#f5f7f5; color:#263c3a; min-height:100vh; }
+.admin-topbar { background:#fff; border-bottom:1px solid #e1e9e5; }
+.admin-topbar-inner { display:flex; justify-content:space-between; align-items:center; min-height:76px; gap:18px; }
+.admin-wordmark { color:#244f4a; font-weight:800; font-size:23px; text-decoration:none; letter-spacing:-.05em; }
+.admin-wordmark span { color:#d99c58; margin-left:4px; }
+.admin-private-label { color:#6a807a; text-transform:uppercase; letter-spacing:.12em; font-size:11px; font-weight:800; }
+.admin-shell { max-width:1200px; padding:40px 20px 70px; }
+.admin-page-heading { display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; margin-bottom:28px; }
+.admin-page-heading h1 { font-size:clamp(30px,4vw,46px); letter-spacing:-.05em; margin:3px 0 9px; }
+.admin-page-heading h1 em { color:#b78955; }
+.admin-muted { color:#6a7e7a; font-size:14px; line-height:1.6; }
+.admin-login-card { background:#fff; border:1px solid #e0e9e4; border-radius:18px; padding:30px; max-width:520px; box-shadow:0 8px 36px rgba(21,65,52,.05); }
+.admin-login-card h2 { margin:0 0 8px; font-size:26px; }
+.admin-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:22px; }
+.admin-metric { border:1px solid #e0e9e4; border-radius:14px; background:#fff; text-align:left; padding:20px; cursor:pointer; box-shadow:0 4px 15px rgba(21,65,52,.025); transition:transform .2s, box-shadow .2s, border-color .2s; }
+.admin-metric:hover,.admin-metric:focus-visible { transform:translateY(-3px); box-shadow:0 10px 22px rgba(21,65,52,.09); border-color:#91b7a8; }
+.admin-metric-label { display:block; color:#6d827d; font-size:12px; font-weight:700; margin-bottom:10px; }
+.admin-metric-value { font-size:32px; color:#254e46; font-weight:800; line-height:1; }
+.admin-list-card { background:#fff; border:1px solid #e0e9e4; border-radius:18px; box-shadow:0 12px 40px rgba(21,65,52,.035); overflow:hidden; }
+.admin-list-toolbar { padding:25px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+.admin-list-toolbar h2 { font-size:21px; margin:0 0 5px; }
+.admin-list-toolbar p { margin:0; }
+.admin-list-controls { display:flex; flex-wrap:wrap; gap:9px; }
+.admin-list-controls input,.admin-list-controls select { border:1px solid #cbdad3; border-radius:9px; padding:10px 12px; font:inherit; background:#fff; color:#27463e; min-height:43px; max-width:100%; }
+.admin-list-head,.admin-record-summary { display:grid; grid-template-columns:minmax(180px,2.2fr) minmax(105px,1fr) minmax(100px,1fr) minmax(90px,.9fr) 25px; gap:14px; align-items:center; }
+.admin-list-head { background:#f5f9f7; padding:12px 25px; color:#6e837c; text-transform:uppercase; font-size:10px; letter-spacing:.1em; font-weight:800; }
+.admin-record { margin:0!important; padding:0!important; border:0!important; border-top:1px solid #e7eeea!important; border-radius:0!important; background:#fff!important; }
+.admin-record-summary { cursor:pointer; list-style:none; padding:18px 25px; min-height:76px; transition:background .2s; }
+.admin-record-summary::-webkit-details-marker { display:none; }
+.admin-record-summary:hover,.admin-record[open]>.admin-record-summary { background:#f8fbf9; }
+.admin-record-customer { display:flex; flex-direction:column; gap:5px; min-width:0; }
+.admin-record-customer strong { color:#2b4640; font-size:14px; overflow-wrap:anywhere; }
+.admin-record-customer small { color:#78918a; font-size:11px; letter-spacing:.03em; }
+.admin-record-date,.admin-record-contact { color:#5a716a; font-size:13px; }
+.admin-state { display:inline-flex; align-items:center; justify-content:center; justify-self:start; padding:6px 11px; border-radius:100px; font-size:11px; font-weight:800; }
+.admin-state-pending { background:#fff4dc; color:#90621b; }
+.admin-state-confirmed { background:#e0f3e8; color:#276746; }
+.admin-state-declined { background:#fbe9e7; color:#9c4b43; }
+.admin-record-chevron { color:#78918a; font-size:23px; transition:transform .2s; }
+.admin-record[open] .admin-record-chevron { transform:rotate(180deg); }
+.admin-record-panel { padding:23px 25px 28px; background:#fbfcfb; border-top:1px solid #e6eee9; animation:admin-reveal .22s ease-out; }
+.admin-detail-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px 20px; }
+.admin-detail-field { display:flex; flex-direction:column; gap:5px; overflow-wrap:anywhere; font-size:14px; color:#2f4841; }
+.admin-detail-label { color:#82938e; text-transform:uppercase; letter-spacing:.07em; font-size:10px; font-weight:800; }
+.admin-detail-section { margin-top:22px; padding-top:20px; border-top:1px solid #e4ebe6; }
+.admin-detail-section h3 { font-size:16px; margin:0 0 13px; }
+.admin-item-list { margin:0; padding-left:19px; color:#425d55; line-height:1.85; }
+.admin-history-entry { white-space:pre-wrap; overflow-wrap:anywhere; background:#fff; border:1px solid #e7eee9; border-radius:8px; padding:12px; }
+.admin-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:14px; }
+.admin-actions .button { font-size:12px; min-height:40px; padding:9px 13px; text-decoration:none; }
+.admin-reply-form { display:block!important; border:0!important; padding:0!important; margin:0!important; }
+.admin-reply-form label { display:block; font-weight:700; }
+.admin-reply-form textarea { width:100%; box-sizing:border-box; margin-top:8px; border:1px solid #cbdad3; border-radius:9px; padding:12px; font:inherit; }
+.admin-decision-form { display:grid!important; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:end; gap:14px; }
+.admin-decision-form label { display:flex; flex-direction:column; gap:7px; font-size:13px; font-weight:700; }
+.admin-decision-form input { width:100%; box-sizing:border-box; border:1px solid #cbdad3; border-radius:9px; padding:11px; min-height:44px; font:inherit; }
+.admin-decision-form .admin-actions { grid-column:1/-1; }
+.admin-live-status { color:#537269; padding:16px 3px; min-height:24px; font-size:13px; }
+.admin-empty { padding:28px; text-align:center; color:#758b82; }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+@keyframes admin-reveal { from {opacity:0;transform:translateY(-5px)} to {opacity:1;transform:translateY(0)} }
+@media(max-width:850px) {
+  .admin-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .admin-list-head { display:none; }
+  .admin-record-summary { grid-template-columns:minmax(0,2fr) minmax(95px,1fr) 24px; gap:10px; }
+  .admin-record-contact { display:none; }
+  .admin-record-summary .admin-state { grid-column:2; grid-row:1; }
+  .admin-record-chevron { grid-column:3; grid-row:1; }
+  .admin-record-date { grid-column:1; grid-row:2; }
+  .admin-detail-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:560px) {
+  .admin-shell { padding:26px 14px 60px; }
+  .admin-topbar-inner { min-height:65px; }
+  .admin-wordmark { font-size:19px; }
+  .admin-list-toolbar { padding:18px; }
+  .admin-list-controls,.admin-list-controls input,.admin-list-controls select { width:100%; }
+  .admin-record-summary { padding:16px 18px; }
+  .admin-record-panel { padding:18px; }
+  .admin-detail-grid,.admin-decision-form { grid-template-columns:minmax(0,1fr)!important; }
+  .admin-metric { padding:15px; }
+  .admin-metric-value { font-size:27px; }
+  .admin-actions .button { flex:1 1 100%; text-align:center; }
+}
+
+/* Tasteful movement for the public storefront. */
+html { scroll-behavior:smooth; }
+.menu-item,.menu-group,.feature-card,.contact-card,.filter-button,.menu-add,.button,.basket-fab {
+  transition:transform .25s cubic-bezier(.2,.75,.3,1), box-shadow .25s, background-color .25s, border-color .25s, opacity .25s;
+}
+.menu-item:hover { transform:translateX(5px); }
+.menu-group:hover,.feature-card:hover { transform:translateY(-5px); box-shadow:0 16px 34px rgba(23,65,51,.1); }
+.menu-add:hover,.basket-fab:hover { transform:translateY(-3px) scale(1.045); }
+.button:hover { transform:translateY(-2px); }
+.reveal-on-scroll { opacity:0; transform:translateY(22px); transition:opacity .65s ease,transform .65s cubic-bezier(.2,.8,.2,1); }
+.reveal-on-scroll.is-visible { opacity:1; transform:translateY(0); }
+@media(prefers-reduced-motion:reduce) {
+  html { scroll-behavior:auto; }
+  *,*::before,*::after { animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; scroll-behavior:auto!important; }
+  .reveal-on-scroll { opacity:1; transform:none; }
+}

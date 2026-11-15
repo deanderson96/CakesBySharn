@@ -30,6 +30,8 @@ FAKE_LIST = {
         "status": "confirmed",
         "customer_name": "Test Customer",
         "customer_email": "test@example.invalid",
+        "contact_method": "email",
+        "customer_mobile": None,
         "fulfilment": "collection",
         "preferred_date": "2026-12-20",
         "notes": "",
@@ -48,6 +50,7 @@ FAKE_LIST = {
         "fulfilment": "collection",
         "notes": "",
         "customer_notified_at": None,
+        "contact_method": "email",
     }],
 }
 
@@ -77,7 +80,8 @@ def test():
                     errors = []
                     page.on("pageerror", lambda error: errors.append(str(error)))
                     page.goto(url, wait_until="load")
-                    link = page.get_by_role("link", name="Open order confirmation email")
+                    page.locator(".admin-record-summary").click()
+                    link = page.get_by_role("link", name="Open order confirmation via Email")
                     link.wait_for(state="visible", timeout=15000)
                     href = link.get_attribute("href")
                     parts = urlsplit(href)
@@ -92,6 +96,8 @@ def test():
                     assert "Items:\r\n- 1 × Iced lemon loaf\r\n- 1 × Afternoon tea for 2" in body
                     assert "Total: £21.50\r\nCollection: 2026-12-20 — 3-4PM" in body
                     assert "Notes:" not in body, (engine, "empty notes displayed", body)
+                    assert page.locator(".admin-record").count() == 1
+                    assert page.locator(".admin-state-confirmed").inner_text() == "Approved"
                     assert not errors, (engine, errors)
                     page.close()
                     print(f"PASS {engine}: admin order email uses proper line breaks")

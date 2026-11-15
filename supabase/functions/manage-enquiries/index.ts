@@ -53,7 +53,8 @@ Deno.serve(async request => {
     if (input.action === 'mark-notified') {
       if (enquiry.status !== 'confirmed') return respond({ error: 'Only confirmed orders can be marked notified' }, 409);
       const method = String(input.method || '');
-      if (!['email', 'whatsapp'].includes(method)) return respond({ error: 'Choose email or WhatsApp' }, 400);
+      if (!['email', 'sms', 'whatsapp'].includes(method)) return respond({ error: 'Choose email, text message or WhatsApp' }, 400);
+      if (method !== (enquiry.contact_method || 'email')) return respond({ error: 'Use the customer\'s selected contact method' }, 400);
       const { data: order, error: orderError } = await database.from('orders').update({
         customer_notified_at: new Date().toISOString(), notification_method: method, customer_notified_by: user.id
       }).eq('enquiry_id', id).select('order_reference').single();
@@ -74,6 +75,7 @@ Deno.serve(async request => {
       // The unique enquiry_id on orders prevents creating duplicate orders.
       const { data: order, error: orderError } = await database.from('orders').insert({
         enquiry_id: id, customer_name: enquiry.customer_name, customer_email: enquiry.customer_email,
+        customer_mobile: enquiry.customer_mobile, contact_method: enquiry.contact_method || 'email',
         fulfilment: enquiry.fulfilment, delivery_address: enquiry.delivery_address,
         items: enquiry.items, total_pence: total, agreed_date: confirmedDate,
         agreed_time: confirmedTime, notes, approved_by: user.id

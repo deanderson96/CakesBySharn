@@ -210,6 +210,10 @@ function clearEnquiry() {
   renderBasket();
   // A successfully submitted enquiry locks its button to prevent duplicates.
   // Clearing the enquiry intentionally starts a fresh submission.
+  contactMethodField.value = 'email';
+  emailField.value = '';
+  mobileField.value = '';
+  updateContactFields();
   const submitButton = document.querySelector('#submit-online-enquiry');
   if (submitButton) submitButton.disabled = false;
   const result = document.querySelector('#online-enquiry-result');
@@ -240,7 +244,9 @@ function buildMessage() {
     });
   }
   if (name) lines.push(`Name: ${name}`);
-  const email = document.querySelector('#customer-email').value.trim();
+  const contactMethod = contactMethodField.value;
+  const email = emailField.value.trim();
+  const mobile = normalizedUkMobile(mobileField.value.trim());
   if (email) lines.push(`Email: ${email}`);
   const fulfilment = document.querySelector('#fulfilment-method').value;
   lines.push(`Fulfilment: ${fulfilment === 'delivery' ? 'Delivery' : 'Collection'}`);
@@ -356,6 +362,24 @@ document.addEventListener('click', event => {
 
 const orderConfig = window.CAKES_ORDER_CONFIG || {};
 const onlineEnabled = Boolean(orderConfig.onlineSubmissionsEnabled === true && orderConfig.supabaseUrl && orderConfig.supabaseAnonKey);
+const contactMethodField = document.querySelector('#contact-method');
+const emailField = document.querySelector('#customer-email');
+const mobileField = document.querySelector('#customer-mobile');
+function updateContactFields() {
+  const emailSelected = contactMethodField.value === 'email';
+  document.querySelector('#contact-email-field').hidden = !emailSelected;
+  document.querySelector('#contact-mobile-field').hidden = emailSelected;
+  emailField.required = emailSelected;
+  mobileField.required = !emailSelected;
+  emailField.setAttribute('aria-invalid', 'false');
+  mobileField.setAttribute('aria-invalid', 'false');
+}
+contactMethodField.addEventListener('change', updateContactFields);
+updateContactFields();
+function normalizedUkMobile(value) {
+  const compact = value.replace(/[\s().-]/g, '');
+  return compact.startsWith('07') ? '+44' + compact.slice(1) : compact;
+}
 const fulfilmentField = document.querySelector('#fulfilment-method');
 const deliveryAddressField = document.querySelector('#delivery-address-field');
 function toggleDeliveryAddress() { deliveryAddressField.hidden = fulfilmentField.value !== 'delivery'; }
@@ -370,7 +394,8 @@ document.querySelector('#submit-online-enquiry').addEventListener('click', async
   const fulfilment = fulfilmentField.value;
   const deliveryAddress = document.querySelector('#delivery-address').value.trim();
   if (!name || name.length > 120) return showEnquiryError('Enter your name (up to 120 characters).', document.querySelector('#customer-name'));
-  if (!email.includes('@') || !email.split('@')[1]?.includes('.') || email.length > 254) return showEnquiryError('Enter a valid email address.', document.querySelector('#customer-email'));
+  if (contactMethod === 'email' && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254)) return showEnquiryError('Enter a valid email address.', emailField);
+  if (contactMethod !== 'email' && !/^\+447[1-57-9]\d{8}$/.test(mobile)) return showEnquiryError('Enter a valid UK mobile number, such as 07700 900123.', mobileField);
   if (!preferredDate) return showEnquiryError('Choose a preferred date.', dateField);
   if (fulfilment === 'delivery' && deliveryAddress.length < 10) return showEnquiryError('Enter your delivery address and postcode.', document.querySelector('#delivery-address'));
   const button = document.querySelector('#submit-online-enquiry');
@@ -381,7 +406,7 @@ document.querySelector('#submit-online-enquiry').addEventListener('click', async
     const response = await fetch(orderConfig.supabaseUrl + '/functions/v1/submit-enquiry', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: orderConfig.supabaseAnonKey },
-      body: JSON.stringify({ name, email, preferredDate, fulfilment,
+      body: JSON.stringify({ name, contactMethod, email: contactMethod === 'email' ? email : null, mobile: contactMethod === 'email' ? null : mobile, preferredDate, fulfilment,
         deliveryAddress: fulfilment === 'delivery' ? deliveryAddress : null,
         notes: notesField.value.trim(), website: document.querySelector('#enquiry-website').value,
         items: Object.entries(cart).filter(([key]) => ITEM_LOOKUP.has(key)).map(([key, quantity]) => ({ key, quantity }))
@@ -391,7 +416,7 @@ document.querySelector('#submit-online-enquiry').addEventListener('click', async
     if (!response.ok) throw new Error(result.error || 'Unable to send enquiry.');
     const acknowledgment = result.acknowledgmentEmailSent === true
       ? 'You should receive an acknowledgment email shortly. Please check your junk or spam folder if it does not arrive.'
-      : 'Automatic acknowledgment emails are not available yet. Please save your reference; our team will contact you by email after reviewing your request.';
+      : 'Automatic acknowledgments are not available yet. Please save your reference; our team will contact you by ' + (contactMethod === 'email' ? 'email' : contactMethod === 'sms' ? 'text message' : 'WhatsApp') + ' after reviewing your request.';
     status.textContent = 'Enquiry received! Thank you for contacting Cakes by Sharn. Your reference: ' + result.reference + '. ' + acknowledgment + ' This is not yet a confirmed order. Our team will review availability, pricing and the next steps.';
   } catch (error) {
     status.textContent = error.message + ' Please try again later.';
@@ -409,3 +434,20 @@ mainNav.querySelectorAll('a').forEach(link => link.addEventListener('click', clo
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape') closeMobileNav();
 });
+
+/* Progressive enhancement: reveal sections as they enter the viewport. */
+if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const revealTargets = document.querySelectorAll('.menu-group, .feature-card, .contact-card, .section-heading');
+  const revealObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px 40px 0px' });
+  revealTargets.forEach(target => {
+    target.classList.add('reveal-on-scroll');
+    revealObserver.observe(target);
+  });
+}

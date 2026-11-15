@@ -169,3 +169,8 @@ The site is enabled through `order-config.js` once the public Edge Function has 
 ### Enquiry endpoint integration verification
 
 Run `python tests/live_submission.py` from an environment with internet access to create one **synthetic** enquiry and verify the actual hosted Supabase Edge Function, returning HTTP 201 and a `CBS-` reference. This creates a test database record that must be removed by an administrator after verification. GitHub Actions runs this live check only for push commits whose message includes `[live-enquiry-test]`. Regular browser checks use mocked responses and do not add records.
+
+## Contact preferences and admin dashboard
+The customer chooses **email**, **SMS/text** or **WhatsApp**. Email is required and format-checked only for email enquiries; UK mobiles are required and normalized to +447... for SMS/WhatsApp. Server validation and database CHECK constraints enforce this as well. Existing email-only enquiries and orders remain valid. SMS and WhatsApp actions open the administrator's own messaging app; no automatic messages are sent or implied. Administrators must send manually and then explicitly record notification. SMS deep links depend on the device having an SMS app; a copy-message action is available.
+
+The admin dashboard has searchable, filterable compact rows that expand into full enquiry details, reply history, approval/decline controls and order notification actions. The public storefront uses hover and scroll reveal transitions with reduced-motion support.
