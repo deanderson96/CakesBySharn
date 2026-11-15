@@ -217,40 +217,21 @@ function buildMessage() {
   const lines = ['Hi Sharn! I would like to enquire about an order.', ''];
   const entries = Object.entries(cart).filter(([key]) => ITEM_LOOKUP.has(key));
   if (entries.length) {
-    // A mailto draft is plain text. Keep the table narrow for mobile mail apps.
-    const itemWidth = 21;
-    const wrapLabel = (label) => {
-      const words = label.split(/\s+/);
-      const rows = [];
-      let line = '';
-      words.forEach(word => {
-        if (!line) line = word;
-        else if ((line + ' ' + word).length <= itemWidth) line += ' ' + word;
-        else { rows.push(line); line = word; }
-      });
-      if (line) rows.push(line);
-      return rows;
-    };
-    const priceWidth = 12;
-    const displayPrice = (item, quantity) => {
-      if (item.priceType === 'quote') return 'Quote';
-      const amount = formatter.format(item.price * quantity);
-      return item.priceType === 'from' ? 'From ' + amount : amount;
-    };
+    // One readable itemised list is shared by email, WhatsApp and copy-to-clipboard.
     lines.push('My choices:');
-    lines.push('Qty | ' + 'Item'.padEnd(itemWidth) + ' | ' + 'Unit'.padEnd(priceWidth) + ' | Line total');
-    lines.push('----+-' + '-'.repeat(itemWidth) + '-+-' + '-'.repeat(priceWidth) + '-+------------');
     entries.forEach(([key, qty]) => {
       const item = ITEM_LOOKUP.get(key);
-      const description = item.name + (item.detail ? ' (' + item.detail + ')' : '');
-      wrapLabel(description).forEach((part, index) => {
-        const quantity = index === 0 ? String(qty).padStart(3) : '   ';
-        const unitPrice = index === 0 ? displayPrice(item, 1) : '';
-        const lineTotal = index === 0 ? displayPrice(item, qty) : '';
-        lines.push(`${quantity} | ${part.padEnd(itemWidth)} | ${unitPrice.padEnd(priceWidth)} | ${lineTotal}`);
-      });
+      const label = item.name + (item.detail ? ' (' + item.detail + ')' : '');
+      lines.push(`- ${qty} × ${label}`);
+      if (item.priceType === 'quote') {
+        lines.push('  Price: On request');
+      } else {
+        const prefix = item.priceType === 'from' ? 'From ' : '';
+        lines.push(`  Unit price: ${prefix}${formatter.format(item.price)}`);
+        lines.push(`  Item total: ${prefix}${formatter.format(item.price * qty)}`);
+      }
+      lines.push('');
     });
-    lines.push('');
   }
   if (name) lines.push(`Name: ${name}`);
   if (date) {
