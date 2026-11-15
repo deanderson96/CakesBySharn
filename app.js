@@ -43,7 +43,7 @@ const MENU = [
   {
     id: 'cupcakes',
     title: 'Cupcakes',
-    icon: '♡',
+    icon: '✦',
     items: [
       { name: 'Vanilla cupcakes', detail: 'Box of 6', price: 10, priceType: 'fixed' },
       { name: 'Red velvet cupcakes', detail: 'Box of 6', price: 10, priceType: 'fixed' },
@@ -137,7 +137,7 @@ function renderBasket() {
   basketCountElement.setAttribute('aria-label', `${totalCount} items in enquiry`);
 
   if (!entries.length) {
-    basketItemsElement.innerHTML = '<div class="basket-empty"><span aria-hidden="true">♡</span><strong>Your enquiry is looking a little empty</strong><p>Browse the menu and tap + to add some treats, or send a general enquiry below.</p></div>';
+    basketItemsElement.innerHTML = '<div class="basket-empty"><span aria-hidden="true">✦</span><strong>No items selected yet</strong><p>Browse the menu and tap + to add some treats, or send a general enquiry below.</p></div>';
     basketTotalElement.hidden = true;
     return;
   }
