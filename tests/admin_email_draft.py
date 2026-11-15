@@ -36,8 +36,8 @@ FAKE_LIST = {
         "preferred_date": "2026-12-20",
         "notes": "",
         "items": [
-            {"quantity": 1, "name": "Iced lemon loaf"},
-            {"quantity": 1, "name": "Afternoon tea for 2"}
+            {"quantity": 1, "name": "Iced lemon loaf", "estimatedUnitPence": 500, "priceType": "fixed"},
+            {"quantity": 1, "name": "Afternoon tea for 2", "estimatedUnitPence": 1600, "priceType": "fixed"}
         ],
         "replies": [],
     }],
@@ -96,6 +96,11 @@ def test():
                     assert "Items:\r\n- 1 × Iced lemon loaf\r\n- 1 × Afternoon tea for 2" in body
                     assert "Total: £21.50\r\nCollection: 2026-12-20 — 3-4PM" in body
                     assert "Notes:" not in body, (engine, "empty notes displayed", body)
+                    assert page.locator(".admin-price-table tbody tr").count() == 2
+                    assert "£5.00" in page.locator(".admin-price-table tbody tr").nth(0).inner_text()
+                    assert "£16.00" in page.locator(".admin-price-table tbody tr").nth(1).inner_text()
+                    assert "£21.00" in page.locator(".admin-estimate-title").inner_text()
+                    assert "£21.50" in page.locator(".admin-order-section").inner_text()
                     assert page.locator(".admin-record").count() == 1
                     assert page.locator(".admin-state-confirmed").inner_text() == "Approved"
                     assert not errors, (engine, errors)

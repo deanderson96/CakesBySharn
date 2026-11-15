@@ -81,6 +81,22 @@
     wrap.append(el('span', 'admin-detail-label', label), el('span', '', value || '—'));
     return wrap;
   }
+  const currency = new Intl.NumberFormat('en-GB', {style:'currency',currency:'GBP'});
+  function money(pence) { return currency.format(pence / 100); }
+  function unitPence(item) {
+    return (item.priceType === 'fixed' || item.priceType === 'from') &&
+      Number.isSafeInteger(item.estimatedUnitPence) && item.estimatedUnitPence >= 0 ? item.estimatedUnitPence : null;
+  }
+  function estimatePrices(items) {
+    let total = 0, from = false, unpriced = items.length === 0;
+    items.forEach(item => {
+      const unit = unitPence(item), qty = Number(item.quantity);
+      if (unit === null || !Number.isSafeInteger(qty) || qty < 1) { unpriced = true; return; }
+      total += unit * qty;
+      if (item.priceType === 'from') from = true;
+    });
+    return {total,from,unpriced};
+  }
   function renderRecord(enquiry) {
     const order = orderMap.get(enquiry.id);
     const method = contactMethod(enquiry);
@@ -91,7 +107,9 @@
     const requested = el('span', 'admin-record-date', formatDate(enquiry.preferred_date));
     const contact = el('span', 'admin-record-contact', contactLabel(method));
     const state = el('span', 'admin-state admin-state-' + enquiry.status, statusLabel(enquiry.status));
-    summary.append(customer, requested, contact, state, el('span', 'admin-record-chevron', '⌄'));
+    const summaryEstimate = estimatePrices(enquiry.items || []);
+    const estimateBadge = el('span', 'admin-record-estimate', money(summaryEstimate.total) + (summaryEstimate.unpriced ? ' + quote' : summaryEstimate.from ? ' from' : ' est.'));
+    summary.append(customer, requested, contact, estimateBadge, state, el('span', 'admin-record-chevron', '⌄'));
     details.append(summary);
     const panel = el('div', 'admin-record-panel');
     const info = el('div', 'admin-detail-grid');
@@ -107,10 +125,42 @@
     panel.append(info);
     const items = el('div', 'admin-detail-section');
     items.append(el('h3', '', 'Order request'));
-    const ul = el('ul', 'admin-item-list');
-    (enquiry.items || []).forEach(item => ul.append(el('li', '', item.quantity + ' × ' + item.name)));
-    if (!ul.children.length) ul.append(el('li', '', 'Custom request'));
-    items.append(ul);
+    const priceSummary = estimatePrices(enquiry.items || []);
+    const tableWrap = el('div', 'admin-price-table-wrap');
+    const table = el('table', 'admin-price-table');
+    const header = el('tr');
+    ['Product', 'Qty', 'Unit price', 'Line total'].forEach(value => header.append(el('th', '', value)));
+    const head = el('thead'); head.append(header); table.append(head);
+    const body = el('tbody');
+    (enquiry.items || []).forEach(item => {
+      const row = el('tr');
+      const name = el('td', 'admin-price-item');
+      name.append(el('strong', '', item.name || 'Custom product'));
+      if (item.priceType === 'from') name.append(el('small', '', 'Starting price'));
+      if (item.priceType === 'quote') name.append(el('small', '', 'Price on request'));
+      const unit = unitPence(item);
+      const qty = Number(item.quantity);
+      const line = unit === null || !Number.isSafeInteger(qty) || qty < 1 ? null : unit * qty;
+      row.append(name, el('td', '', String(item.quantity || '—')),
+        el('td', 'admin-price-money', unit === null ? 'Quote required' : (item.priceType === 'from' ? 'From ' : '') + money(unit)),
+        el('td', 'admin-price-money', line === null ? 'Quote required' : (item.priceType === 'from' ? 'From ' : '') + money(line)));
+      body.append(row);
+    });
+    if (!body.children.length) {
+      const row = el('tr'); const cell = el('td', '', 'Custom request — quote required');
+      cell.colSpan = 4; row.append(cell); body.append(row);
+    }
+    table.append(body); tableWrap.append(table); items.append(tableWrap);
+    const total = el('div', 'admin-estimate-summary');
+    const totalRow = el('div', 'admin-estimate-title');
+    totalRow.append(el('span', '', 'Estimated menu subtotal'), el('strong', '', money(priceSummary.total)));
+    total.append(totalRow);
+    const qualifiers = [];
+    if (priceSummary.from) qualifiers.push('Includes starting prices');
+    if (priceSummary.unpriced) qualifiers.push('Excludes unpriced/custom items');
+    qualifiers.push('Delivery and customisation not included');
+    total.append(el('p', 'admin-estimate-note', qualifiers.join(' · ') + '. Not a final quote.'));
+    items.append(total);
     if (enquiry.notes) items.append(detailLine('Customer requirements', enquiry.notes));
     panel.append(items);
     if (enquiry.replies && enquiry.replies.length) {
@@ -212,6 +262,7 @@
       const [timeWrap,time] = field('Collection / delivery time','text');
       const [priceWrap,price] = field('Final price (£)','number');
       price.min='0'; price.step='0.01';
+      price.value = (estimatePrices(enquiry.items || []).total / 100).toFixed(2);
       const [noteWrap,note] = field('Internal order notes','text',false);
       const approve = el('button','button button-primary','Approve & create order');
       approve.type='submit';
