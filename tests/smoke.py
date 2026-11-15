@@ -75,8 +75,8 @@ def run():
                         page.wait_for_function("Boolean(window.__lastCopied)")
                         assert page.evaluate("window.__lastCopied") == email_body, (engine, width, "copy and email contents differ")
                         # From-price and quote-only products have no invented fixed totals.
-                        page.locator('[data-add="celebration-cakes:0"]').click()
-                        page.locator('[data-add="celebration-cakes:0"]').click()
+                        page.locator('.menu-add[data-add="celebration-cakes:0"]').click()
+                        page.locator('.menu-add[data-add="celebration-cakes:0"]').click()
                         page.locator('[data-add="cupcakes:3"]').click()
                         page.locator("#email-enquiry").click()
                         mixed_body = parse_qs(urlsplit(page.evaluate("window.__lastMailto")).query)["body"][0]
