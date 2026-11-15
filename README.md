@@ -123,3 +123,18 @@ These actions require the designated Supabase Auth user and the `ADMIN_EMAIL` se
 The online form handles personal data, including names, email addresses, dates, and potentially home addresses. Before activation, Sharn should approve a proper privacy notice with the business identity, purpose and lawful basis of processing, retention/deletion process, third-party processors and data rights contact. The short notice on the site is informative but **is not a complete privacy policy**. Avoid collecting unnecessary personal or sensitive information. Access to customer details must stay limited to the authorised admin.
 
 Do not publish real online submissions until email sender/domain verification, anti-spam protection, function deployment and full end-to-end testing are complete. Do not paste Supabase database passwords, service role keys or email API tokens into GitHub or this site's public configuration. The project URL and *publishable* API key are designed to be public.
+
+## Manual correspondence and separate orders (domain-free interim workflow)
+
+The connected Supabase database contains `public.enquiries`, `public.enquiry_replies`, and `public.orders`. Approving an enquiry creates a **separate order record** with its own `CBS-ORD-` reference and agreed price, date and time. A unique constraint prevents two orders for one enquiry. Orders have a separate `customer_notified_at` field: approving an enquiry does **not** mean an email has been sent.
+
+Until a verified sending domain/provider is configured, the private admin UI uses **manual Hotmail correspondence**:
+
+1. Sharn reviews an enquiry and can open an email draft to the customer. The email is **not sent automatically**; Sharn must send it and explicitly record that reply.
+2. Sharn approves the enquiry to create an order (or declines it). This does not contact the customer.
+3. The admin dashboard shows the order reference, agreed total and date/time. Sharn opens the prefilled confirmation email, sends it through Hotmail, and then marks the customer notified via email or WhatsApp.
+4. Customers submitting through a future online form must see an immediate **on-screen** receipt and reference. **Automatic customer acknowledgement and automatic order-created emails are not available without a configured transactional email sender**; do not describe an on-screen receipt as an email.
+
+The current public online submission feature is deliberately **not activated** while email delivery and anti-bot protections are incomplete. The email/WhatsApp enquiry draft fallback remains available.
+
+**Security:** Keep the `ADMIN_EMAIL` secret set to the exact Sharn login email, disable public Auth sign-ups, and never expose service-role credentials. The admin function must not be considered operational until the admin Auth account and secret are configured and tested. Before production, add CAPTCHA/rate limiting, test the entire customer flow, and publish an approved privacy notice. For reliability at scale, move order creation to a transactional SQL function; the interim function attempts cleanup if the enquiry status update fails.

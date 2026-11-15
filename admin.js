@@ -31,9 +31,11 @@
     try {
       const data = await api({ action: 'list' });
       orders.replaceChildren();
+      const orderMap = new Map((data.orders || []).map(order => [order.enquiry_id, order]));
       for (const enquiry of data.enquiries) {
         const section = document.createElement('section');
         section.style.cssText = 'border:1px solid #ddd;border-radius:12px;padding:20px;margin:20px 0';
+        const existingOrder = orderMap.get(enquiry.id);
         const heading = document.createElement('h2');
         heading.textContent = enquiry.reference + ' — ' + enquiry.status;
         section.append(heading);
@@ -46,6 +48,9 @@
         const notes = document.createElement('p');
         notes.textContent = 'Requirements: ' + enquiry.notes + (enquiry.delivery_address ? ' | Address: ' + enquiry.delivery_address : '');
         section.append(notes);
+        const contact = document.createElement('p');
+        contact.textContent = 'Correspondence is handled manually via Hotmail or WhatsApp. An email draft does not send itself.';
+        section.append(contact);
         if (Array.isArray(enquiry.replies) && enquiry.replies.length) {
           const history = document.createElement('details');
           const summary = document.createElement('summary');
@@ -61,33 +66,72 @@
         const replyForm = document.createElement('form');
         replyForm.className = 'admin-reply-form';
         const replyLabel = document.createElement('label');
-        replyLabel.textContent = 'Reply to customer (does not confirm an order)';
+        replyLabel.textContent = 'Compose a reply (opens Hotmail or your email app)';
         const replyText = document.createElement('textarea');
         replyText.rows = 3;
         replyText.maxLength = 2000;
         replyText.required = true;
-        replyText.placeholder = 'Answer questions or ask for more information…';
+        replyText.placeholder = 'Ask a question or reply to the customer…';
         replyLabel.append(replyText);
         const replyButton = document.createElement('button');
         replyButton.type = 'submit';
-        replyButton.textContent = 'Send reply by email';
+        replyButton.textContent = 'Open email draft';
         replyButton.className = 'button button-outline';
         replyForm.append(replyLabel, replyButton);
-        replyForm.addEventListener('submit', async event => {
+        replyForm.addEventListener('submit', event => {
           event.preventDefault();
           if (!replyForm.reportValidity()) return;
-          if (!window.confirm('Send this reply to ' + enquiry.customer_email + '? The order status will not change.')) return;
-          replyButton.disabled = true;
-          status.textContent = 'Sending reply to ' + enquiry.reference + '…';
-          try {
-            await api({ action: 'reply', id: enquiry.id, message: replyText.value.trim() });
-            await refresh();
-          } catch (error) {
-            status.textContent = error.message;
-            replyButton.disabled = false;
-          }
+          const subject = 'Cakes by Sharn enquiry ' + enquiry.reference;
+          const body = 'Hello ' + enquiry.customer_name + ',\\n\\n' + replyText.value.trim() + '\\n\\nReference: ' + enquiry.reference + '\\nCakes by Sharn';
+          window.location.href = 'mailto:' + encodeURIComponent(enquiry.customer_email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+          status.textContent = 'Email draft opened. Send it from Hotmail, then record the reply if sent.';
         });
+        const logReply = document.createElement('button');
+        logReply.type = 'button';
+        logReply.className = 'button button-outline';
+        logReply.textContent = 'Record reply sent';
+        logReply.addEventListener('click', async () => {
+          const message = replyText.value.trim();
+          if (!message) { status.textContent = 'Write the reply before recording it.'; return; }
+          if (!window.confirm('Have you actually sent this reply to the customer?')) return;
+          logReply.disabled = true;
+          try { await api({ action: 'log-reply', id: enquiry.id, message }); await refresh(); }
+          catch (error) { status.textContent = error.message; logReply.disabled = false; }
+        });
+        replyForm.append(logReply);
         section.append(replyForm);
+        if (existingOrder) {
+          const orderInfo = document.createElement('p');
+          orderInfo.textContent = 'ORDER CREATED: ' + existingOrder.order_reference + ' — £' + (existingOrder.total_pence / 100).toFixed(2) + ' — ' + existingOrder.agreed_date + ' (' + existingOrder.agreed_time + ').';
+          section.append(orderInfo);
+          const orderMessage = 'Hello ' + enquiry.customer_name + ',\\n\\nYour Cakes by Sharn order has been created and approved.\\nOrder reference: ' + existingOrder.order_reference +
+            '\\nEnquiry reference: ' + enquiry.reference + '\\nItems: ' + enquiry.items.map(i => i.quantity + ' × ' + i.name).join('; ') +
+            '\\nTotal: £' + (existingOrder.total_pence / 100).toFixed(2) + '\\n' + (existingOrder.fulfilment === 'delivery' ? 'Delivery' : 'Collection') +
+            ': ' + existingOrder.agreed_date + ' — ' + existingOrder.agreed_time + '\\nNotes: ' + existingOrder.notes + '\\n\\nCakes by Sharn';
+          const notifyLink = document.createElement('a');
+          notifyLink.className = 'button button-outline';
+          notifyLink.textContent = 'Open order confirmation email';
+          notifyLink.href = 'mailto:' + encodeURIComponent(enquiry.customer_email) + '?subject=' + encodeURIComponent('Cakes by Sharn — order ' + existingOrder.order_reference) + '&body=' + encodeURIComponent(orderMessage);
+          section.append(notifyLink);
+          const notified = document.createElement('p');
+          notified.textContent = existingOrder.customer_notified_at ? 'Customer notification recorded: ' + new Date(existingOrder.customer_notified_at).toLocaleString('en-GB') + ' (' + existingOrder.notification_method + ')' : 'Customer has not yet been marked notified.';
+          section.append(notified);
+          if (!existingOrder.customer_notified_at) {
+            for (const method of ['email', 'whatsapp']) {
+              const mark = document.createElement('button');
+              mark.type = 'button';
+              mark.className = 'button button-outline';
+              mark.textContent = 'Mark notified via ' + method;
+              mark.addEventListener('click', async () => {
+                if (!window.confirm('Confirm you have sent the order details to the customer via ' + method + '?')) return;
+                mark.disabled = true;
+                try { await api({ action: 'mark-notified', id: enquiry.id, method }); await refresh(); }
+                catch (error) { status.textContent = error.message; mark.disabled = false; }
+              });
+              section.append(mark);
+            }
+          }
+        }
         if (enquiry.status === 'pending') {
           const form = document.createElement('form');
           const [dateWrap, date] = field('Confirmed date', 'date');
@@ -98,13 +142,13 @@
           const [noteWrap, note] = field('Message to customer', 'text', false);
           form.append(dateWrap, timeWrap, priceWrap, noteWrap);
           const confirm = document.createElement('button');
-          confirm.type = 'submit'; confirm.textContent = 'Confirm and email customer'; confirm.className = 'button button-primary';
+          confirm.type = 'submit'; confirm.textContent = 'Approve & create order'; confirm.className = 'button button-primary';
           const decline = document.createElement('button');
-          decline.type = 'button'; decline.textContent = 'Decline and email customer'; decline.className = 'button button-outline';
+          decline.type = 'button'; decline.textContent = 'Decline enquiry'; decline.className = 'button button-outline';
           form.append(confirm, decline);
           async function action(kind) {
             if (kind === 'confirm' && !form.reportValidity()) return;
-            if (!window.confirm('Email customer and ' + kind + ' this enquiry?')) return;
+            if (!window.confirm(kind === 'confirm' ? 'Approve this enquiry and create a real order? You must notify the customer separately.' : 'Decline this enquiry? You must notify the customer separately.')) return;
             confirm.disabled = decline.disabled = true;
             status.textContent = 'Processing ' + enquiry.reference + '…';
             try {
@@ -119,7 +163,7 @@
         }
         orders.append(section);
       }
-      status.textContent = data.enquiries.length + ' enquiries loaded.';
+      status.textContent = data.enquiries.length + ' enquiries loaded; ' + (data.orders || []).length + ' orders created.';
     } catch (error) { status.textContent = error.message; }
   }
   document.querySelector('#login-form').addEventListener('submit', async event => {

@@ -352,7 +352,7 @@ document.querySelector('#email-enquiry').addEventListener('click', prepareEmailE
 document.querySelector('#whatsapp-enquiry').addEventListener('click', prepareWhatsAppEnquiry);
 document.querySelector('#copy-enquiry').addEventListener('click', copyMessage);
 const orderConfig = window.CAKES_ORDER_CONFIG || {};
-const onlineEnabled = Boolean(orderConfig.supabaseUrl && orderConfig.supabaseAnonKey);
+const onlineEnabled = Boolean(orderConfig.onlineSubmissionsEnabled === true && orderConfig.supabaseUrl && orderConfig.supabaseAnonKey);
 const fulfilmentField = document.querySelector('#fulfilment-method');
 const deliveryAddressField = document.querySelector('#delivery-address-field');
 function toggleDeliveryAddress() { deliveryAddressField.hidden = fulfilmentField.value !== 'delivery'; }

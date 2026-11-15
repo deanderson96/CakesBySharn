@@ -1,4 +1,4 @@
-import { cors, respond, db, sendEmail } from '../_shared/common.ts';
+import { cors, respond, db } from '../_shared/common.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 Deno.serve(async request => {
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
@@ -16,39 +16,43 @@ Deno.serve(async request => {
       const { data, error } = await database.from('enquiries').select('*').order('created_at', { ascending: false }).limit(100);
       if (error) throw error;
       const records = data || [];
-      if (!records.length) return respond({ enquiries: [] });
+      if (!records.length) return respond({ enquiries: [], orders: [] });
       const { data: replies, error: repliesError } = await database.from('enquiry_replies')
         .select('enquiry_id,sent_at,message')
         .in('enquiry_id', records.map(enquiry => enquiry.id))
         .order('sent_at', { ascending: true });
       if (repliesError) throw repliesError;
-      return respond({ enquiries: records.map(enquiry => ({
+      const { data: orders, error: orderError } = await database.from('orders').select('*').order('created_at', { ascending: false }).limit(100);
+      if (orderError) throw orderError;
+      return respond({ orders: orders || [], enquiries: records.map(enquiry => ({
         ...enquiry,
         replies: (replies || []).filter(reply => reply.enquiry_id === enquiry.id)
       })) });
     }
-    if (!['reply', 'confirm', 'decline'].includes(input.action)) return respond({ error: 'Invalid action' }, 400);
+    if (!['log-reply', 'confirm', 'decline', 'mark-notified'].includes(input.action)) return respond({ error: 'Invalid action' }, 400);
     const id = String(input.id || '');
     if (!/^[0-9a-f-]{36}$/i.test(id)) return respond({ error: 'Invalid reference' }, 400);
     const { data: enquiry, error: readError } = await database.from('enquiries').select('*').eq('id', id).single();
     if (readError || !enquiry) return respond({ error: 'Enquiry not found' }, 404);
-    if (input.action === 'reply') {
+    if (input.action === 'log-reply') {
       const reply = String(input.message || '').trim();
       if (reply.length < 1 || reply.length > 2000) return respond({ error: 'Write a message of up to 2,000 characters' }, 400);
-      // A reply is not an approval and does not change the enquiry status.
-      await sendEmail(enquiry.customer_email,
-        'Cakes by Sharn: message about ' + enquiry.reference,
-        'Hello ' + enquiry.customer_name + ',\n\n' + reply +
-        '\n\nEnquiry reference: ' + enquiry.reference +
-        '\nYour enquiry remains ' + enquiry.status + '.\n\nCakes by Sharn');
-      const { error: replyError } = await database.from('enquiry_replies').insert({
-        enquiry_id: enquiry.id, message: reply
-      });
-      if (replyError) {
-        console.error('Reply sent but log could not be stored for', enquiry.reference, replyError.message);
-        return respond({ error: 'Email may have been sent, but the reply could not be recorded. Check before retrying.' }, 502);
-      }
-      return respond({ sent: true });
+      const { error: logError } = await database.from('enquiry_replies').insert({ enquiry_id: enquiry.id, message: reply });
+      if (logError) throw logError;
+      // The email/WhatsApp message was sent outside this system; never claim automated delivery.
+      return respond({ recorded: true });
+    }
+    if (input.action === 'mark-notified') {
+      if (enquiry.status !== 'confirmed') return respond({ error: 'Only confirmed orders can be marked notified' }, 409);
+      const method = String(input.method || '');
+      if (!['email', 'whatsapp'].includes(method)) return respond({ error: 'Choose email or WhatsApp' }, 400);
+      const { data: order, error: orderError } = await database.from('orders').update({
+        customer_notified_at: new Date().toISOString(), notification_method: method
+      }).eq('enquiry_id', id).select('order_reference').single();
+      if (orderError) throw orderError;
+      const { error: notifiedError } = await database.from('enquiries').update({ notified_at: new Date().toISOString() }).eq('id', id);
+      if (notifiedError) throw notifiedError;
+      return respond({ notified: true, orderReference: order.order_reference });
     }
     if (enquiry.status !== 'pending') return respond({ error: 'Enquiry already processed' }, 409);
     const confirm = input.action === 'confirm';
@@ -58,21 +62,32 @@ Deno.serve(async request => {
     const notes = String(input.notes || '').trim();
     if (notes.length > 1500) return respond({ error: 'Notes too long' }, 400);
     if (confirm && (!/^\d{4}-\d{2}-\d{2}$/.test(confirmedDate) || Number.isNaN(Date.parse(confirmedDate)) || confirmedDate < new Date().toISOString().slice(0,10) || !confirmedTime || confirmedTime.length > 100 || !Number.isSafeInteger(total) || total < 0 || total > 100000000)) return respond({ error: 'Valid confirmed date, time and final price required' }, 400);
-    const newStatus = confirm ? 'confirmed' : 'declined';
-    const message = confirm
-      ? 'Your Cakes by Sharn order is confirmed!\n\nOrder: ' + enquiry.reference + '\nItems:\n' + enquiry.items.map((i: {quantity: number; name: string}) => '- ' + i.quantity + ' × ' + i.name).join('\n') + '\nFinal agreed total: £' + (total / 100).toFixed(2) + '\n' + (enquiry.fulfilment === 'delivery' ? 'Delivery' : 'Collection') + ' date: ' + confirmedDate + '\nTime: ' + confirmedTime + (enquiry.fulfilment === 'delivery' ? '\nDelivery address: ' + enquiry.delivery_address : '') + '\nSharn’s notes: ' + notes + '\n\nPlease contact Sharn if any details need changing.'
-      : 'Cakes by Sharn enquiry ' + enquiry.reference + '\n\nUnfortunately Sharn cannot accept this enquiry.\n' + notes;
-    // Send before committing the status; if delivery fails, leave pending for safe retry.
-    await sendEmail(enquiry.customer_email, 'Cakes by Sharn: ' + (confirm ? 'Order confirmed' : 'Enquiry update') + ' ' + enquiry.reference, message);
+    if (confirm) {
+      // The unique enquiry_id on orders prevents creating duplicate orders.
+      const { data: order, error: orderError } = await database.from('orders').insert({
+        enquiry_id: id, customer_name: enquiry.customer_name, customer_email: enquiry.customer_email,
+        fulfilment: enquiry.fulfilment, delivery_address: enquiry.delivery_address,
+        items: enquiry.items, total_pence: total, agreed_date: confirmedDate,
+        agreed_time: confirmedTime, notes
+      }).select('order_reference').single();
+      if (orderError) return respond({ error: 'Could not create order; it may already exist. Refresh before retrying.' }, 409);
+      const { data: changed, error: writeError } = await database.from('enquiries').update({
+        status: 'confirmed', confirmed_date: confirmedDate, confirmed_time: confirmedTime,
+        final_total_pence: total, sharn_notes: notes, confirmed_at: new Date().toISOString()
+      }).eq('id', id).eq('status', 'pending').select('id').maybeSingle();
+      if (writeError || !changed) {
+        const { error: rollbackError } = await database.from('orders').delete().eq('enquiry_id', id);
+        if (rollbackError) console.error('Manual reconciliation needed for', id);
+        return respond({ error: 'Order status update failed. Refresh and contact support before retrying.' }, 409);
+      }
+      return respond({ status: 'confirmed', orderReference: order.order_reference, customerNotified: false });
+    }
     const { data: changed, error: writeError } = await database.from('enquiries').update({
-      status: newStatus, confirmed_date: confirm ? confirmedDate : null,
-      confirmed_time: confirm ? confirmedTime : null, final_total_pence: confirm ? total : null,
-      sharn_notes: notes, confirmed_at: confirm ? new Date().toISOString() : null,
-      notified_at: new Date().toISOString()
+      status: 'declined', sharn_notes: notes
     }).eq('id', id).eq('status', 'pending').select('id').maybeSingle();
     if (writeError) throw writeError;
     if (!changed) return respond({ error: 'Already processed; please refresh' }, 409);
-    return respond({ status: newStatus });
+    return respond({ status: 'declined', customerNotified: false });
   } catch (error) {
     console.error(error);
     return respond({ error: 'Unable to process request; check status before retrying' }, 500);
