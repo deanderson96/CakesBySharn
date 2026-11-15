@@ -56,6 +56,38 @@ Deno.serve(async (request) => {
       return respond({ report: await rpc('admin_tax_year_report', { p_start_year: year }) });
     }
     if (action === 'accounting-export') return respond({ orders: await rpc('admin_accounting_export') || [] });
+    if (action === 'financial-export') {
+      return respond({ ledger: await rpc('admin_financial_export') });
+    }
+    if (action === 'record-expense') {
+      const date=String(input.date||''),category=String(input.category||''),
+        supplier=String(input.supplier||''),description=String(input.description||''),
+        amount=Number(input.amountPence),reference=String(input.evidenceReference||'');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+        !['ingredients','packaging','delivery','equipment','marketing','utilities','other'].includes(category) ||
+        !supplier.trim() || supplier.length>120 || description.trim().length<3 || description.length>500 ||
+        !Number.isSafeInteger(amount) || amount<=0 || amount>100000000 || reference.length>120)
+        return respond({error:'Invalid expense entry'},400);
+      return respond(await rpc('admin_record_expense',{
+        p_spent_on:date,p_category:category,p_supplier:supplier.trim(),p_description:description.trim(),
+        p_amount_pence:amount,p_evidence_reference:reference
+      }));
+    }
+    if (action === 'payment-summary' || action === 'record-payment') {
+      const orderId=String(input.id||'');
+      if (!/^[0-9a-f-]{36}$/i.test(orderId)) return respond({error:'Invalid order ID'},400);
+      if (action === 'payment-summary') return respond({ summary:await rpc('admin_payment_summary',{p_order_id:orderId}) });
+      const date=String(input.date||''),eventType=String(input.eventType||''),method=String(input.method||''),
+        reference=String(input.reference||''),amount=Number(input.amountPence);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !['receipt','refund'].includes(eventType) ||
+        !['bank','cash','card','other'].includes(method) || reference.length>120 ||
+        !Number.isSafeInteger(amount) || amount<1 || amount>100000000)
+        return respond({error:'Invalid payment entry'},400);
+      return respond(await rpc('admin_record_payment',{
+        p_order_id:orderId,p_event_type:eventType,p_amount_pence:amount,p_paid_on:date,
+        p_method:method,p_reference:reference
+      }));
+    }
     if (action === 'owner-admins') { requireOwner(); return respond({ admins: await rpc('owner_list_admins') }); }
     if (action === 'owner-audit') { requireOwner(); return respond({ events: await rpc('owner_audit_log', { p_limit: 100 }) }); }
     if (action === 'owner-set-admin') {

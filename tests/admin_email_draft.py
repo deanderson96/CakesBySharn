@@ -97,6 +97,12 @@ def test():
                             year = json.loads(route.request.post_data or "{}").get("startYear",2025)
                             data = {"report": {"start_year": year, "order_count": 1,
                                 "agreed_order_total_pence": 2500,
+                                "recorded_receipts_pence":1000,"recorded_refunds_pence":0,
+                                "recorded_expenses_pence":200,"recorded_cash_difference_pence":800,
+                                "payment_entries":[{"paid_on":"2025-05-12","order_reference":"CBS-TAX-1",
+                                    "event_type":"receipt","method":"bank","amount_pence":1000}],
+                                "expense_entries":[{"spent_on":"2025-05-13","category":"ingredients",
+                                    "supplier":"Shop","description":"Flour","amount_pence":200}],
                                 "orders": [{"order_reference": "CBS-TAX-1",
                                             "ordered_at": "2025-05-12T11:00:00Z",
                                             "customer_name": "Test <Customer>",
@@ -105,6 +111,19 @@ def test():
                                 "enquiries": [{"reference": "CBS-ENQ-1",
                                                "created_at": "2025-05-12T11:00:00Z",
                                                "status": "confirmed"}]}}
+                        elif action == "payment-summary":
+                            data = {"summary": {"agreed_pence":2150,"received_pence":1000,
+                                                "refunded_pence":0,"net_received_pence":1000,
+                                                "outstanding_pence":1150}}
+                        elif action == "financial-export":
+                            data = {"ledger": {"payments":[{"event_type":"receipt",
+                                "paid_on":"2026-11-13","order_reference":"CBS-ORD-1234567890",
+                                "payment_method":"bank","external_reference":"BANK123",
+                                "amount_pence":1000}], "expenses":[{"spent_on":"2026-11-13",
+                                "category":"ingredients","supplier":"Shop","description":"Flour",
+                                "evidence_reference":"INV123","amount_pence":200}]}}
+                        elif action in ("record-expense","record-payment"):
+                            data = {"recorded":True}
                         elif action == "accounting-export":
                             data = {"orders": [{
                                 "order_reference": "CBS-ORD-ARCHIVED",
@@ -169,7 +188,16 @@ def test():
                         tax_html = tax_file.read()
                     assert "6 April" in tax_html and "5 April" in tax_html
                     assert "£25.00" in tax_html
+                    assert "Recorded cash activity" in tax_html
+                    assert "£10.00" in tax_html and "£2.00" in tax_html
                     assert "Test &lt;Customer&gt;" in tax_html
+                    with page.expect_download() as finance_download_info:
+                        page.locator("#admin-export-ledger").click()
+                    finance_download = finance_download_info.value
+                    with open(finance_download.path(), "r", encoding="utf-8-sig") as financial_file:
+                        ledger_csv = financial_file.read()
+                    assert "BANK123" in ledger_csv and "INV123" in ledger_csv
+                    assert "10.00" in ledger_csv and "-2.00" in ledger_csv
                     assert page.locator(".admin-record").count() == 1
                     assert page.locator(".admin-state-confirmed").inner_text() == "Approved"
                     assert not errors, (engine, errors)

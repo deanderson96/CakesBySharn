@@ -760,3 +760,18 @@ html { scroll-behavior:smooth; }
 .admin-pagination { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:16px; padding:20px; }
 .admin-pagination span { font-size:13px; color:#53726b; font-weight:700; }
 @media(max-width:620px){ .admin-audit-row { grid-template-columns:1fr; gap:3px; } }
+
+/* Accounting: append-only cash and expenses */
+.admin-finance-panel{margin:0 0 24px;background:#fff;padding:24px;border:1px solid #d6ebe7;border-radius:15px;}
+.admin-finance-panel h2{font:400 clamp(22px,3vw,29px)/1.2 var(--serif);margin:4px 0 8px}
+.admin-expense-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:end;margin:20px 0}
+.admin-expense-form label,.admin-order-payment-form label{display:flex;flex-direction:column;gap:7px;color:#45665e;font-size:12px;font-weight:700;min-width:0}
+.admin-expense-form input,.admin-expense-form select,.admin-order-payment-form input,.admin-order-payment-form select{width:100%;min-width:0;min-height:42px;padding:10px;border:1px solid #c7ddd6;border-radius:9px;background:#fff;color:var(--ink);font:400 14px var(--sans)}
+.admin-expense-form .button{min-height:42px}
+.admin-order-payment{padding:19px;margin-top:20px;background:#f3faf7;border:1px solid #d4e9e2;border-radius:12px}
+.admin-order-payment h4{font:400 20px var(--serif);margin:0 0 9px}
+.admin-order-payment .admin-muted{margin:0 0 12px}
+.admin-order-payment-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end}
+.admin-order-payment-form .button{min-height:42px}
+@media(max-width:850px){.admin-expense-form,.admin-order-payment-form{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:530px){.admin-expense-form,.admin-order-payment-form{grid-template-columns:1fr}}

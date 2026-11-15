@@ -61,11 +61,78 @@
       const rows = (report.orders||[]).map(order=>'<tr><td>'+htmlEscape(order.order_reference)+'</td><td>'+htmlEscape(new Date(order.ordered_at).toLocaleDateString('en-GB',{timeZone:'Europe/London'}))+'</td><td>'+htmlEscape(order.customer_name)+'</td><td>'+htmlEscape((Array.isArray(order.items)?order.items:[]).map(item=>String(item.quantity??1)+' × '+String(item.name||'')).join('; '))+'</td><td>£'+(Number(order.total_pence)/100).toFixed(2)+'</td></tr>').join('');
       const enquiries = (report.enquiries||[]).map(item=>'<tr><td>'+htmlEscape(item.reference)+'</td><td>'+htmlEscape(new Date(item.created_at).toLocaleDateString('en-GB',{timeZone:'Europe/London'}))+'</td><td>'+htmlEscape(item.status)+'</td></tr>').join('');
       const year = Number(report.start_year);
-      const document = '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cakes by Sharn UK tax-year report '+year+'–'+(year+1)+'</title><style>body{font:14px Arial,sans-serif;color:#173f39;max-width:1100px;margin:36px auto;padding:0 20px}h1,h2{color:#087d7b}table{width:100%;border-collapse:collapse;margin:20px 0}td,th{border-bottom:1px solid #d8e9e5;text-align:left;padding:10px;vertical-align:top}th{background:#e9f7f4}.note{background:#fff4df;padding:15px;line-height:1.6}.summary{font-size:18px;font-weight:bold}@media print{body{margin:10mm}}</style></head><body><h1>Cakes by Sharn — annual tax-year report</h1><p>UK tax year: 6 April '+year+' to 5 April '+(year+1)+' (Europe/London)</p><p>Generated: '+htmlEscape(new Date().toLocaleString('en-GB',{timeZone:'Europe/London'}))+'</p><p class="summary">Orders: '+Number(report.order_count)+' · Total agreed charges: £'+(Number(report.agreed_order_total_pence)/100).toFixed(2)+'</p><div class="note"><strong>Bookkeeping working paper — not a tax return.</strong> These are agreed order charges grouped by order creation date, not confirmed receipts. The system does not record payments, expenses, refunds or VAT. Reconcile against invoices, bank statements and expenses, and apply the correct accounting basis before filing.</div><h2>Approved orders</h2><table><thead><tr><th>Reference</th><th>Created</th><th>Customer</th><th>Items</th><th>Agreed charge</th></tr></thead><tbody>'+rows+'</tbody></table><h2>Enquiry audit register</h2><p>'+Number((report.enquiries||[]).length)+' enquiries recorded in this tax year.</p><table><thead><tr><th>Reference</th><th>Received</th><th>Status</th></tr></thead><tbody>'+enquiries+'</tbody></table></body></html>';
-      downloadReport(document,'cakes-by-sharn-tax-year-'+year+'-'+(year+1)+'.html');
+      const document = '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cakes by Sharn UK tax-year report '+year+'–'+(year+1)+'</title><style>body{font:14px Arial,sans-serif;color:#173f39;max-width:1100px;margin:36px auto;padding:0 20px}h1,h2{color:#087d7b}table{width:100%;border-collapse:collapse;margin:20px 0}td,th{border-bottom:1px solid #d8e9e5;text-align:left;padding:10px;vertical-align:top}th{background:#e9f7f4}.note{background:#fff4df;padding:15px;line-height:1.6}.summary{font-size:18px;font-weight:bold}@media print{body{margin:10mm}}</style></head><body><h1>Cakes by Sharn — annual tax-year report</h1><p>UK tax year: 6 April '+year+' to 5 April '+(year+1)+' (Europe/London)</p><p>Generated: '+htmlEscape(new Date().toLocaleString('en-GB',{timeZone:'Europe/London'}))+'</p><p class="summary">Orders: '+Number(report.order_count)+' · Total agreed charges: £'+(Number(report.agreed_order_total_pence)/100).toFixed(2)+'</p><div class="note"><strong>Bookkeeping working paper — not a tax return.</strong> These are agreed order charges grouped by order creation date, not confirmed receipts. Receipts and expenses are self-recorded and may be incomplete. VAT is not tracked. Reconcile against invoices, bank statements and expenses, and apply the correct accounting basis before filing.</div><h2>Approved orders</h2><table><thead><tr><th>Reference</th><th>Created</th><th>Customer</th><th>Items</th><th>Agreed charge</th></tr></thead><tbody>'+rows+'</tbody></table><h2>Enquiry audit register</h2><p>'+Number((report.enquiries||[]).length)+' enquiries recorded in this tax year.</p><table><thead><tr><th>Reference</th><th>Received</th><th>Status</th></tr></thead><tbody>'+enquiries+'</tbody></table></body></html>';
+
+      const paymentRows=(report.payment_entries||[]).map(p=>'<tr><td>'+htmlEscape(p.paid_on)+
+        '</td><td>'+htmlEscape(p.order_reference)+'</td><td>'+htmlEscape(p.event_type)+
+        '</td><td>'+htmlEscape(p.method)+'</td><td>£'+(Number(p.amount_pence)/100).toFixed(2)+'</td></tr>').join('');
+      const expenseRows=(report.expense_entries||[]).map(e=>'<tr><td>'+htmlEscape(e.spent_on)+
+        '</td><td>'+htmlEscape(e.category)+'</td><td>'+htmlEscape(e.supplier)+
+        '</td><td>'+htmlEscape(e.description)+'</td><td>£'+(Number(e.amount_pence)/100).toFixed(2)+'</td></tr>').join('');
+      const recordedReceipts=Number(report.recorded_receipts_pence||0);
+      const recordedRefunds=Number(report.recorded_refunds_pence||0);
+      const recordedExpenses=Number(report.recorded_expenses_pence||0);
+      const cashInfo='<h2>Recorded cash activity</h2><p class="summary">Receipts: £'+(recordedReceipts/100).toFixed(2)+
+        ' · Refunds: £'+(recordedRefunds/100).toFixed(2)+
+        ' · Expenses: £'+(recordedExpenses/100).toFixed(2)+
+        ' · Provisional difference: £'+(Number(report.recorded_cash_difference_pence||0)/100).toFixed(2)+'</p>'+
+        '<p class="note">Figures cover only entries manually recorded in this application. Missing receipts, expenses or refunds are excluded. This is not verified bank reconciliation, taxable profit or a filed return. Check the chosen accounting basis and underlying evidence.</p>'+
+        '<h2>Receipts and refunds register</h2><table><thead><tr><th>Paid on</th><th>Order</th><th>Type</th><th>Method</th><th>Amount</th></tr></thead><tbody>'+
+        paymentRows+'</tbody></table>'+
+        '<h2>Expense register</h2><table><thead><tr><th>Spent on</th><th>Category</th><th>Supplier</th><th>Description</th><th>Amount</th></tr></thead><tbody>'+
+        expenseRows+'</tbody></table>';
+      const annualDocument=document.replace('</body></html>',cashInfo+'</body></html>');
+      downloadReport(annualDocument,'cakes-by-sharn-tax-year-'+year+'-'+(year+1)+'.html');
       status.textContent='Annual report prepared. Open the downloaded HTML document in a browser to print or save as PDF.';
     } catch(error) {status.textContent='Tax report failed: '+error.message;}
     finally {taxReportButton.disabled=false;}
+  });
+
+  const expenseForm=document.querySelector('#admin-expense-form');
+  const todayLondon=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  expenseForm.elements.namedItem('spentOn').value=todayLondon();
+  expenseForm.addEventListener('submit',async event=>{
+    event.preventDefault();
+    if(!expenseForm.reportValidity())return;
+    const button=expenseForm.querySelector('[type="submit"]');
+    if(!window.confirm('Record this expense permanently? Verify the receipt or invoice before continuing.'))return;
+    button.disabled=true;
+    try{
+      const v=name=>expenseForm.elements.namedItem(name).value;
+      await api({action:'record-expense',date:v('spentOn'),category:v('category'),
+        supplier:v('supplier'),description:v('description'),amountPence:Math.round(Number(v('amount'))*100),
+        evidenceReference:v('reference')});
+      expenseForm.reset();expenseForm.elements.namedItem('spentOn').value=todayLondon();
+      status.textContent='Expense recorded. Keep the supporting evidence securely.';
+    }catch(error){status.textContent='Expense not recorded: '+error.message;}
+    finally{button.disabled=false;}
+  });
+  document.querySelector('#admin-export-ledger').addEventListener('click',async event=>{
+    const button=event.currentTarget;
+    button.disabled=true;status.textContent='Preparing financial ledger…';
+    try{
+      const {ledger}=await api({action:'financial-export'});
+      const header=['Record type','Date','Order','Category','Supplier','Description','Method','Evidence reference','Amount GBP'];
+      const rows=[
+        ...(ledger.payments||[]).map(p=>[
+          p.event_type==='refund'?'Refund':'Receipt',p.paid_on,p.order_reference,
+          '','','',p.payment_method,p.external_reference,
+          ((p.event_type==='refund'?-1:1)*Number(p.amount_pence)/100).toFixed(2)
+        ]),
+        ...(ledger.expenses||[]).map(e=>[
+          'Expense',e.spent_on,'',e.category,e.supplier,e.description,'',
+          e.evidence_reference,(-Number(e.amount_pence)/100).toFixed(2)
+        ])
+      ];
+      const csv='\uFEFF'+[header,...rows].map(row=>row.map(safeCsvCell).join(',')).join('\r\n')+'\r\n';
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement('a');link.href=url;
+      link.download='cakes-by-sharn-ledger-'+todayLondon()+'.csv';
+      document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url);
+      status.textContent='Financial ledger exported: '+rows.length+' entries. Store the file securely.';
+    }catch(error){status.textContent='Ledger export unavailable: '+error.message;}
+    finally{button.disabled=false;}
   });
   const accountingExport = document.querySelector('#admin-export-accounting');
   function safeCsvCell(value) {
@@ -352,7 +419,60 @@
       }
       if(order.status==='cancelled'&&order.cancellation_reason)
         box.append(detailLine('Cancellation reason',order.cancellation_reason));
-      box.append(actions);panel.append(box);
+      const ledgerBox=el('div','admin-order-payment');
+      ledgerBox.append(el('h4','','Payments and refunds'));
+      const paymentSummary=el('p','admin-muted','Expand the enquiry to load recorded payments.');
+      ledgerBox.append(paymentSummary);
+      async function loadPaymentSummary(){
+        if(!order.id)return;
+        try{
+          const {summary}=await api({action:'payment-summary',id:order.id});
+          paymentSummary.textContent='Net received '+money(Number(summary.net_received_pence))+
+            ' · Agreed '+money(Number(summary.agreed_pence))+
+            ' · Outstanding '+money(Number(summary.outstanding_pence))+
+            ' (recorded entries only)';
+        }catch(error){paymentSummary.textContent='Payment summary unavailable: '+error.message;}
+      }
+      details.addEventListener('toggle',()=>{if(details.open)loadPaymentSummary();});
+      const paymentForm=el('form','admin-order-payment-form');
+      const paymentTypeLabel=el('label','','Entry type');
+      const paymentType=document.createElement('select');
+      [['receipt','Payment received'],['refund','Refund issued']].forEach(([value,label])=>{
+        const option=document.createElement('option');option.value=value;option.textContent=label;paymentType.append(option);
+      });
+      paymentTypeLabel.append(paymentType);
+      const [paidDateWrap,paidDate]=field('Payment date','date');
+      paidDate.value=todayLondon();paidDate.max=todayLondon();
+      const [amountWrap,amount]=field('Amount (£)','number');
+      amount.min='0.01';amount.step='0.01';amount.max='1000000';
+      const methodLabel=el('label','','Method');
+      const method=document.createElement('select');
+      [['bank','Bank transfer'],['cash','Cash'],['card','Card'],['other','Other']].forEach(([value,label])=>{
+        const option=document.createElement('option');option.value=value;option.textContent=label;method.append(option);
+      });
+      methodLabel.append(method);
+      const [referenceWrap,reference]=field('Payment reference','text',false);
+      reference.maxLength=120;
+      const record=el('button','button button-outline','Record financial entry');
+      record.type='submit';
+      paymentForm.append(paymentTypeLabel,paidDateWrap,amountWrap,methodLabel,referenceWrap,record);
+      paymentForm.addEventListener('submit',async event=>{
+        event.preventDefault();
+        if(!paymentForm.reportValidity())return;
+        if(!window.confirm('Record this actual payment or refund permanently? Check your bank or receipt evidence first.'))return;
+        record.disabled=true;
+        try{
+          await api({action:'record-payment',id:order.id,eventType:paymentType.value,
+            amountPence:Math.round(Number(amount.value)*100),date:paidDate.value,
+            method:method.value,reference:reference.value.trim()});
+          amount.value='';reference.value='';
+          await loadPaymentSummary();
+          status.textContent='Financial entry recorded and audit-logged.';
+        }catch(error){status.textContent='Financial entry not recorded: '+error.message;}
+        finally{record.disabled=false;}
+      });
+      ledgerBox.append(paymentForm);
+      box.append(actions,ledgerBox);panel.append(box);
     }
     if (enquiry.status === 'pending') {
       const actionBox = el('div', 'admin-detail-section admin-decision-section');
