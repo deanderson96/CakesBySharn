@@ -499,3 +499,10 @@ h2 em { font-size: 1.08em; }
 @media (max-width:600px) {
   .enquiry-whatsapp { padding: 15px 14px; font-size: 15px; }
 }
+
+#online-enquiry-panel { margin: 1rem 0; }
+#online-enquiry-result { margin: .7rem 0; line-height: 1.5; }
+#submit-online-enquiry { width: 100%; }
+#submit-online-enquiry:disabled { opacity: .65; cursor: wait; }
+#delivery-address-field[hidden], #online-enquiry-panel[hidden] { display: none; }
+#fulfilment-method { display: block; width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: #fff; color: var(--ink); font: inherit; }

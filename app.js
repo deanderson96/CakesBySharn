@@ -234,6 +234,12 @@ function buildMessage() {
     });
   }
   if (name) lines.push(`Name: ${name}`);
+  const email = document.querySelector('#customer-email').value.trim();
+  if (email) lines.push(`Email: ${email}`);
+  const fulfilment = document.querySelector('#fulfilment-method').value;
+  lines.push(`Fulfilment: ${fulfilment === 'delivery' ? 'Delivery' : 'Collection'}`);
+  const address = document.querySelector('#delivery-address').value.trim();
+  if (fulfilment === 'delivery' && address) lines.push(`Delivery address: ${address}`);
   if (date) {
     const [year, month, day] = date.split('-');
     lines.push(`Preferred date: ${day}/${month}/${year}`);
@@ -345,6 +351,47 @@ document.addEventListener('click', event => {
 document.querySelector('#email-enquiry').addEventListener('click', prepareEmailEnquiry);
 document.querySelector('#whatsapp-enquiry').addEventListener('click', prepareWhatsAppEnquiry);
 document.querySelector('#copy-enquiry').addEventListener('click', copyMessage);
+const orderConfig = window.CAKES_ORDER_CONFIG || {};
+const onlineEnabled = Boolean(orderConfig.supabaseUrl && orderConfig.supabaseAnonKey);
+const fulfilmentField = document.querySelector('#fulfilment-method');
+const deliveryAddressField = document.querySelector('#delivery-address-field');
+function toggleDeliveryAddress() { deliveryAddressField.hidden = fulfilmentField.value !== 'delivery'; }
+fulfilmentField.addEventListener('change', toggleDeliveryAddress);
+toggleDeliveryAddress();
+if (onlineEnabled) document.querySelector('#online-enquiry-panel').hidden = false;
+document.querySelector('#submit-online-enquiry').addEventListener('click', async () => {
+  if (!validateEnquiry()) return;
+  const name = document.querySelector('#customer-name').value.trim();
+  const email = document.querySelector('#customer-email').value.trim();
+  const preferredDate = dateField.value;
+  const fulfilment = fulfilmentField.value;
+  const deliveryAddress = document.querySelector('#delivery-address').value.trim();
+  if (!name || name.length > 120) return showEnquiryError('Enter your name (up to 120 characters).', document.querySelector('#customer-name'));
+  if (!email.includes('@') || !email.split('@')[1]?.includes('.') || email.length > 254) return showEnquiryError('Enter a valid email address.', document.querySelector('#customer-email'));
+  if (!preferredDate) return showEnquiryError('Choose a preferred date.', dateField);
+  if (fulfilment === 'delivery' && deliveryAddress.length < 10) return showEnquiryError('Enter your delivery address and postcode.', document.querySelector('#delivery-address'));
+  const button = document.querySelector('#submit-online-enquiry');
+  const status = document.querySelector('#online-enquiry-result');
+  button.disabled = true;
+  status.textContent = 'Sending enquiry…';
+  try {
+    const response = await fetch(orderConfig.supabaseUrl + '/functions/v1/submit-enquiry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: orderConfig.supabaseAnonKey },
+      body: JSON.stringify({ name, email, preferredDate, fulfilment,
+        deliveryAddress: fulfilment === 'delivery' ? deliveryAddress : null,
+        notes: notesField.value.trim(),
+        items: Object.entries(cart).filter(([key]) => ITEM_LOOKUP.has(key)).map(([key, quantity]) => ({ key, quantity }))
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Unable to send enquiry.');
+    status.textContent = 'Enquiry received! Reference: ' + result.reference + '. This is not yet a confirmed order.';
+  } catch (error) {
+    status.textContent = error.message + ' Please use the email enquiry option below instead.';
+    button.disabled = false;
+  }
+});
 
 menuToggle.addEventListener('click', () => {
   const isOpen = mainNav.classList.toggle('open');

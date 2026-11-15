@@ -1,6 +1,6 @@
 # Cakes by Sharn
 
-A responsive static website for Cakes by Sharn, using the business's turquoise branding and supplied menu. The site contains no payment processing, backend or tracking scripts.
+A responsive static website for Cakes by Sharn, using the business's turquoise branding and supplied menu. The public site remains static, with an optional Supabase/Resend Phase 1 enquiry backend. The backend is disabled until configured and deployed; no payment processing is included.
 
 ## Site features
 
@@ -78,3 +78,30 @@ Browser automation is **not** a substitute for testing an actual email app on a 
 
 - Instagram: https://www.instagram.com/cakesbysharnx/
 - Facebook: https://www.facebook.com/cakesbysharnx/
+
+## Phase 1 automated enquiries (requires deployment)
+
+**Not live by default.** The website retains its working email/WhatsApp draft options until an administrator configures the backend. No customer data is sent to Supabase while `order-config.js` has empty values.
+
+### Components
+
+- `supabase/schema.sql`: private enquiries table with row-level security and no public read/write grants.
+- `supabase/functions/submit-enquiry/index.ts`: validates requests, creates a pending enquiry, sends Sharn an email and sends the customer an acknowledgement. This acknowledgement **does not confirm an order**.
+- `supabase/functions/manage-enquiries/index.ts`: authenticates Sharn's Supabase account, restricts access by `ADMIN_EMAIL`, lists enquiries and confirms/declines with an email to the customer.
+- `admin.html`: password-protected dashboard for Sharn to review enquiries and enter the actual total, date and collection/delivery time. Do not rely on the URL being secret.
+- `order-config.js`: public project URL and **publishable** Supabase key only. Never commit a service-role key or Resend API key.
+
+### Activation checklist
+
+1. Create a Supabase project and apply `supabase/schema.sql` using the SQL editor.
+2. Create an email sender domain and verify it with Resend (or adapt `sendEmail` for another transactional provider).
+3. In Supabase Auth, create **only Sharn's** admin user with a strong password, and disable open public sign-ups. Use the exact email in `ADMIN_EMAIL`. Consider MFA.
+4. Set Edge Function secrets: `RESEND_API_KEY`, `EMAIL_FROM` (verified sender, e.g. `orders@your-verified-domain`), `SHARN_EMAIL=cakesbysharnx@hotmail.com`, `ADMIN_EMAIL`, and `SITE_ORIGIN=https://deanderson96.github.io`. Supabase supplies its own `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` in supported deployments.
+5. Deploy both Edge Functions with JWT verification **disabled only for `submit-enquiry`** (public form); keep JWT verification enabled for `manage-enquiries`. The manage function additionally verifies the bearer token and exact admin email.
+6. Add the Supabase project URL and public anon/publishable key to `order-config.js`, then publish the website.
+7. Test submission, acknowledgement, Sharn notification, confirmation and decline using a test customer address, including delivery and collection. Confirm mail delivery and review spam/abuse protections before public launch.
+8. Configure rate limiting, CAPTCHA/bot mitigation and monitoring on the public function before enabling it for real customers. Restrict email sender and verify data protection/privacy notices and retention policy for names, addresses and order details.
+
+**Important:** The confirmation sends the final amount entered by Sharn, and the chosen date/time. It does not charge a customer or collect payment. Where the final amount or date differs from the customer's request, Sharn should obtain customer acceptance before confirming. If an email delivery fails, an enquiry remains stored for manual follow-up; check logs and delivery status. The basic prototype does not provide exactly-once notification delivery under simultaneous admin actions; use an outbox/queue before higher-volume production use.
+
+The customer form shows a direct online submit button only when `order-config.js` contains both public settings. The existing email and WhatsApp draft options remain as fallbacks.
