@@ -273,6 +273,16 @@ function prepareEmailEnquiry(event) {
     + '&body=' + encodeURIComponent(buildMessage());
   event.currentTarget.href = 'mailto:' + ENQUIRY_EMAIL + '?' + query;
 }
+// Without a business phone number or its official shared profile link,
+// WhatsApp can prefill the message but cannot automatically select @Cakesbysharnx.
+// This documented wa.me form opens the user's recipient picker.
+function prepareWhatsAppEnquiry(event) {
+  if (!validateEnquiry()) {
+    event.preventDefault();
+    return;
+  }
+  event.currentTarget.href = 'https://wa.me/?text=' + encodeURIComponent(buildMessage());
+}
 async function copyMessage() {
   if (!validateEnquiry()) return;
   const text = buildMessage();
@@ -352,6 +362,7 @@ document.addEventListener('click', event => {
 });
 
 document.querySelector('#email-enquiry').addEventListener('click', prepareEmailEnquiry);
+document.querySelector('#whatsapp-enquiry').addEventListener('click', prepareWhatsAppEnquiry);
 document.querySelector('#copy-enquiry').addEventListener('click', copyMessage);
 
 menuToggle.addEventListener('click', () => {

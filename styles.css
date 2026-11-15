@@ -474,3 +474,28 @@ h2 em { font-size: 1.08em; }
 .enquiry-copy-fallback:hover { background:#edf8f5; }
 .enquiry-copy-fallback:focus-visible { outline:3px solid #e4a44c; outline-offset:3px; }
 @media (max-width:600px) { .enquiry-email { gap:12px; padding:15px 14px; font-size:15px; } }
+
+/* WhatsApp share option: the recipient is selected in WhatsApp, not pre-addressed. */
+.enquiry-whatsapp {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 52px;
+  margin-top: 18px;
+  gap: 12px;
+  white-space: normal;
+  text-align: center;
+  color: #075f48;
+  border-color: #a6cec2;
+  background: #f3fbf7;
+}
+.enquiry-whatsapp:hover { background: #e3f7ec; }
+.enquiry-whatsapp-help {
+  margin: 11px 0 7px;
+  color: #405f59;
+  font-size: 13px;
+  line-height: 1.65;
+}
+@media (max-width:600px) {
+  .enquiry-whatsapp { padding: 15px 14px; font-size: 15px; }
+}

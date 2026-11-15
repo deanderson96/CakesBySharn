@@ -11,10 +11,13 @@ A responsive static website for Cakes by Sharn, using the business's turquoise b
 - **In-page enquiry section** with normal document scrolling instead of a fixed modal/drawer, to avoid mobile keyboard, scroll-lock and frozen-panel issues.
 - Basic enquiry checks: either select a menu item or describe a custom request (at least 10 characters); dates in the past cannot be used.
 - **Email enquiry:** opens the customer's default email app with `cakesbysharnx@hotmail.com` pre-addressed, a subject, and a body containing a compact, plain-text item table (quantity, product, unit price and per-item line total), name, preferred date and requirements. The email deliberately excludes the estimated total, which remains visible only on the website. A copy-text fallback remains available if no email app is configured.
+- **WhatsApp share enquiry:** opens the official `https://wa.me/?text=...` share flow with the same order message populated. Because the only provided WhatsApp identity is the username `@Cakesbysharnx` and no verified direct-chat URL or WhatsApp number has been supplied, **WhatsApp asks customers to select the recipient**. The site displays the intended username to guide them. It does not claim to address the chat automatically. Email remains the direct, pre-addressed option.
 - Dynamic prices and explanatory text for items with quoted or starting prices.
 - SEO basics including canonical URL, Open Graph metadata, sitemap and robots.txt.
 
 **An enquiry is not a confirmed order.** The site does not take payments or automatically send messages. Clicking **Open email with enquiry** creates a `mailto:` link and asks the customer's email app to open a draft. The customer must review the draft and press **Send**. No data is transmitted to the site or a server by this action.
+
+The WhatsApp share option opens WhatsApp's contact picker with the enquiry text. The customer must select the correct contact (if available) and press Send. A direct username link can be considered when the business supplies an official share link from WhatsApp; do not guess a `wa.me/username` URL.
 
 ## Local development
 
@@ -51,7 +54,7 @@ The enquiry uses **in-memory state**, not persistent browser storage. The custom
 
 ## Automated browser tests
 
-Browser regression checks are in `tests/smoke.py`, with an Actions workflow in `.github/workflows/website-checks.yml`. They exercise Chromium and WebKit at mobile and desktop sizes and cover basket quantities, clear-all, date and empty-request validation, pre-populated email recipient/subject/body, the copy-text fallback, reload/reset behaviour, script errors and horizontal overflow.
+Browser regression checks are in `tests/smoke.py`, with an Actions workflow in `.github/workflows/website-checks.yml`. They exercise Chromium and WebKit at mobile and desktop sizes and cover basket quantities, clear-all, date and empty-request validation, pre-populated email recipient/subject/body, WhatsApp share text, the copy-text fallback, reload/reset behaviour, script errors and horizontal overflow.
 
 To run locally:
 

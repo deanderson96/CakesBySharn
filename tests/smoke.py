@@ -46,6 +46,11 @@ def run():
                                 window.__emailWasBlocked = event.defaultPrevented;
                                 event.preventDefault();
                             });
+                            document.querySelector('#whatsapp-enquiry').addEventListener('click', event => {
+                                window.__lastWhatsApp = event.currentTarget.href;
+                                window.__whatsAppWasBlocked = event.defaultPrevented;
+                                event.preventDefault();
+                            });
                         }""")
                         assert page.locator("#enquiry").is_visible(), (engine, width, "enquiry hidden")
                         layout = page.evaluate("""() => ({
@@ -83,6 +88,11 @@ def run():
                         assert "Name: Test customer" in email_body
                         assert "Chocolate drip cake with pink decoration" in email_body
                         assert page.evaluate("window.__emailWasBlocked") is False, (engine, width, "valid draft blocked")
+                        page.locator("#whatsapp-enquiry").click()
+                        whatsapp_link = urlsplit(page.evaluate("window.__lastWhatsApp"))
+                        assert whatsapp_link.scheme == "https" and whatsapp_link.netloc == "wa.me" and whatsapp_link.path == "/", (engine, width, "incorrect WhatsApp share link")
+                        assert parse_qs(whatsapp_link.query).get("text") == [email_body], (engine, width, "WhatsApp message differs from email")
+                        assert page.evaluate("window.__whatsAppWasBlocked") is False, (engine, width, "valid WhatsApp share blocked")
                         page.locator("#copy-enquiry").click()
                         page.wait_for_function("Boolean(window.__lastCopied)")
                         assert page.evaluate("window.__lastCopied") == email_body, (engine, width, "copy and email contents differ")
@@ -105,11 +115,15 @@ def run():
                         page.locator("#email-enquiry").click()
                         assert page.locator("#enquiry-error").is_visible(), (engine, width, "empty enquiry allowed")
                         assert page.evaluate("window.__emailWasBlocked") is True, (engine, width, "invalid email was opened")
+                        page.locator("#whatsapp-enquiry").click()
+                        assert page.evaluate("window.__whatsAppWasBlocked") is True, (engine, width, "invalid WhatsApp share allowed")
                         page.locator("#order-notes").fill("A custom cake enquiry, please")
                         page.locator("#preferred-date").fill("2020-01-01")
                         page.locator("#email-enquiry").click()
                         assert page.locator("#enquiry-error").is_visible(), (engine, width, "past date allowed")
                         assert page.evaluate("window.__emailWasBlocked") is True, (engine, width, "invalid date not blocked")
+                        page.locator("#whatsapp-enquiry").click()
+                        assert page.evaluate("window.__whatsAppWasBlocked") is True, (engine, width, "invalid date WhatsApp share allowed")
                         page.reload(wait_until="domcontentloaded")
                         # The floating shortcut is intentionally hidden over the enquiry section.
                         # inner_text() returns an empty string for hidden elements in browsers.
