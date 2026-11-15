@@ -389,7 +389,9 @@ if (onlineEnabled) document.querySelector('#online-enquiry-panel').hidden = fals
 document.querySelector('#submit-online-enquiry').addEventListener('click', async () => {
   if (!validateEnquiry()) return;
   const name = document.querySelector('#customer-name').value.trim();
-  const email = document.querySelector('#customer-email').value.trim();
+  const contactMethod = contactMethodField.value;
+  const email = emailField.value.trim();
+  const mobile = normalizedUkMobile(mobileField.value.trim());
   const preferredDate = dateField.value;
   const fulfilment = fulfilmentField.value;
   const deliveryAddress = document.querySelector('#delivery-address').value.trim();
