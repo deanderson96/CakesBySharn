@@ -227,8 +227,8 @@ function buildMessage() {
         lines.push('  Price: On request');
       } else {
         const prefix = item.priceType === 'from' ? 'From ' : '';
-        lines.push(`  Unit price: ${prefix}${formatter.format(item.price)}`);
-        lines.push(`  Item total: ${prefix}${formatter.format(item.price * qty)}`);
+        lines.push(`  Estimated unit price: ${prefix}${formatter.format(item.price)}`);
+        lines.push(`  Estimated item total: ${prefix}${formatter.format(item.price * qty)}`);
       }
       lines.push('');
     });

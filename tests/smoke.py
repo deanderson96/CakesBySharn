@@ -78,8 +78,8 @@ def run():
                         assert query.get("subject") == ["Cakes by Sharn - Order enquiry"], (engine, width, "wrong email subject")
                         email_body = query["body"][0]
                         assert "My choices:\n- 2 × Banana loaf" in email_body, (engine, width, "item list missing")
-                        assert "  Unit price: £5.00" in email_body, (engine, width, "unit price missing")
-                        assert "  Item total: £10.00" in email_body, (engine, width, "item total missing")
+                        assert "  Estimated unit price: £5.00" in email_body, (engine, width, "unit price missing")
+                        assert "  Estimated item total: £10.00" in email_body, (engine, width, "item total missing")
                         assert "Qty | Item" not in email_body, (engine, width, "old table layout remained")
                         assert "Estimated total" not in email_body, (engine, width, "total leaked into email")
                         assert "Estimate only" not in email_body, (engine, width, "pricing disclaimer leaked into email")
@@ -101,8 +101,8 @@ def run():
                         page.locator('[data-add="cupcakes:3"]').click()
                         page.locator("#email-enquiry").click()
                         mixed_body = parse_qs(urlsplit(page.evaluate("window.__lastMailto")).query)["body"][0]
-                        assert "  Unit price: From £45.00" in mixed_body, (engine, width, "starting unit price missing")
-                        assert "  Item total: From £90.00" in mixed_body, (engine, width, "starting item total missing")
+                        assert "  Estimated unit price: From £45.00" in mixed_body, (engine, width, "starting unit price missing")
+                        assert "  Estimated item total: From £90.00" in mixed_body, (engine, width, "starting item total missing")
                         assert "- 1 × Personalised cupcakes" in mixed_body, (engine, width, "quote item missing")
                         assert "  Price: On request" in mixed_body, (engine, width, "quote-only item not labelled")
                         assert "Estimated total" not in mixed_body, (engine, width, "email contains basket total")
