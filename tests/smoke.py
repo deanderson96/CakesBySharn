@@ -59,7 +59,12 @@ def run():
                         page.locator("#copy-enquiry").click()
                         assert page.locator("#enquiry-error").is_visible(), (engine, width, "past date allowed")
                         page.reload(wait_until="domcontentloaded")
-                        assert page.locator("#basket-count").inner_text() == "0", (engine, width, "basket persisted")
+                        # The floating shortcut is intentionally hidden over the enquiry section.
+                        # inner_text() returns an empty string for hidden elements in browsers.
+                        # text_content() reads the actual count regardless of visibility.
+                        assert page.locator("#basket-count").text_content() == "0", (engine, width, "basket persisted")
+                        assert page.locator("#basket-items .basket-empty").is_visible(), (engine, width, "basket not cleared after reload")
+                        assert page.locator("#basket-total").is_hidden(), (engine, width, "estimate survived reload")
                         assert page.evaluate("localStorage.getItem('cakes-by-sharn-enquiry-v1') === null")
                         assert not errors, (engine, width, errors)
                         page.close()
