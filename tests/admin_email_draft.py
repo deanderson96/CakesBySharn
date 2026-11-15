@@ -69,14 +69,29 @@ def test():
                         status=200, content_type="application/javascript",
                         headers={"Access-Control-Allow-Origin": "*"},
                         body=FAKE_SUPABASE_MODULE))
-                    page.route("**/functions/v1/manage-enquiries", lambda route: route.fulfill(
-                        status=200, content_type="application/json",
-                        headers={
-                            "Access-Control-Allow-Origin": "*",
-                            "Access-Control-Allow-Headers": "authorization, apikey, content-type",
-                            "Access-Control-Allow-Methods": "POST, OPTIONS",
-                        },
-                        body=json.dumps(FAKE_LIST)))
+                    def admin_response(route):
+                        action = json.loads(route.request.post_data or "{}").get("action")
+                        if action == "statistics":
+                            data = {"statistics": {
+                                "periods": [
+                                    {"months": n, "enquiries": 5, "pending": 2, "approved": 2,
+                                     "declined": 1, "email": 3, "sms": 1, "whatsapp": 1,
+                                     "orders": 2, "approved_value_pence": 4250,
+                                     "estimated_pence": 3900, "notified": 1,
+                                     "awaiting_notification": 1}
+                                    for n in (1, 3, 6, 9, 12)],
+                                "monthly": [
+                                    {"month": "2026-%02d" % m, "enquiries": 3,
+                                     "orders": 2, "approved": 2, "value_pence": 4250}
+                                    for m in range(1, 13)]}}
+                        else:
+                            data = FAKE_LIST
+                        route.fulfill(status=200, content_type="application/json",
+                                      headers={"Access-Control-Allow-Origin": "*",
+                                               "Access-Control-Allow-Headers": "authorization, apikey, content-type",
+                                               "Access-Control-Allow-Methods": "POST, OPTIONS"},
+                                      body=json.dumps(data))
+                    page.route("**/functions/v1/manage-enquiries", admin_response)
                     errors = []
                     page.on("pageerror", lambda error: errors.append(str(error)))
                     page.goto(url, wait_until="load")
@@ -101,6 +116,12 @@ def test():
                     assert "£16.00" in page.locator(".admin-price-table tbody tr").nth(1).inner_text()
                     assert "£21.00" in page.locator(".admin-estimate-title").inner_text()
                     assert "£21.50" in page.locator(".admin-order-section").inner_text()
+                    assert page.locator(".admin-analytics-stat").count() == 8
+                    assert "£42.50" in page.locator("#admin-analytics-cards").inner_text()
+                    page.locator("#admin-period").select_option("12")
+                    assert page.locator(".admin-chart-month").count() == 12
+                    page.locator("#admin-period").select_option("3")
+                    assert page.locator(".admin-chart-month").count() == 3
                     assert page.locator(".admin-record").count() == 1
                     assert page.locator(".admin-state-confirmed").inner_text() == "Approved"
                     assert not errors, (engine, errors)

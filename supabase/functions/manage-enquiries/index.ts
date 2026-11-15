@@ -20,6 +20,12 @@ Deno.serve(async request => {
     if (adminError) throw adminError;
     if (!administrator) return respond({ error: 'Not authorised' }, 403);
     const input = await request.json();
+    if (input.action === 'statistics') {
+      const { data: statistics, error: statisticsError } = await database.rpc('admin_business_statistics');
+      if (statisticsError) throw statisticsError;
+      if (!statistics) return respond({ error: 'Statistics unavailable' }, 403);
+      return respond({ statistics });
+    }
     if (input.action === 'list') {
       const { data, error } = await database.from('enquiries').select('*').order('created_at', { ascending: false }).limit(100);
       if (error) throw error;

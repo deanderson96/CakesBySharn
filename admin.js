@@ -300,6 +300,67 @@
     empty.hidden = matching.length > 0;
     document.querySelector('#admin-list-caption').textContent = matching.length + ' of ' + records.length + ' enquiries · Select a row to see details and actions';
   }
+  const reportingPeriod = document.querySelector('#admin-period');
+  const analyticsCards = document.querySelector('#admin-analytics-cards');
+  const activityChart = document.querySelector('#admin-activity-chart');
+  const pipeline = document.querySelector('#admin-pipeline');
+  const contactBreakdown = document.querySelector('#admin-contact-breakdown');
+  let businessStatistics = null;
+  function statisticCard(label, value, explanation) {
+    const card = el('div', 'admin-analytics-stat');
+    card.append(el('span', 'admin-analytics-stat-label', label), el('strong', 'admin-analytics-stat-value', value), el('small', '', explanation));
+    return card;
+  }
+  function renderStatistics() {
+    if (!businessStatistics) return;
+    const period = businessStatistics.periods.find(item => item.months === Number(reportingPeriod.value));
+    if (!period) return;
+    const conversion = period.enquiries ? (period.orders / period.enquiries * 100).toFixed(1) + '%' : '—';
+    const average = period.orders ? money(Math.round(period.approved_value_pence / period.orders)) : '—';
+    analyticsCards.replaceChildren(
+      statisticCard('New enquiries', String(period.enquiries), 'Requests received'),
+      statisticCard('Orders created', String(period.orders), 'Approved in this period'),
+      statisticCard('Order conversion', conversion, 'Orders created ÷ enquiries received*'),
+      statisticCard('Agreed order value', money(period.approved_value_pence), 'Not confirmed payments'),
+      statisticCard('Average order value', average, 'Per order created'),
+      statisticCard('Menu-price estimate', money(period.estimated_pence), 'May exclude custom items'),
+      statisticCard('Awaiting review', String(period.pending), 'Of enquiries received'),
+      statisticCard('Customer notifications due', String(period.awaiting_notification), 'Of orders created')
+    );
+    pipeline.replaceChildren();
+    [['Pending',period.pending],['Approved',period.approved],['Declined',period.declined]].forEach(([label,count]) => {
+      const row = el('div','admin-breakdown-row');
+      const top = el('div','admin-breakdown-top');
+      top.append(el('span','',label),el('strong','',String(count)));
+      const track = el('div','admin-breakdown-track');
+      const fill = el('div','admin-breakdown-fill');
+      fill.style.width = (period.enquiries ? count / period.enquiries * 100 : 0) + '%';
+      track.append(fill); row.append(top,track); pipeline.append(row);
+    });
+    contactBreakdown.replaceChildren();
+    [['Email',period.email],['Text',period.sms],['WhatsApp',period.whatsapp]].forEach(([label,count]) => {
+      const row = el('div','admin-contact-stat');
+      row.append(el('span','',label),el('strong','',String(count)));
+      contactBreakdown.append(row);
+    });
+    const months = businessStatistics.monthly.slice(-Number(reportingPeriod.value));
+    activityChart.replaceChildren();
+    const max = Math.max(1,...months.flatMap(item => [item.enquiries,item.orders]));
+    months.forEach(item => {
+      const group = el('div','admin-chart-month');
+      const bars = el('div','admin-chart-bars');
+      for (const [value,kind] of [[item.enquiries,'enquiries'],[item.orders,'orders']]) {
+        const bar = el('div','admin-chart-bar admin-chart-bar-' + kind);
+        bar.style.height = (value / max * 100) + '%';
+        bar.title = item.month + ': ' + value + ' ' + kind;
+        bars.append(bar);
+      }
+      group.append(bars,el('span','admin-chart-label',new Date(item.month+'-01T12:00:00').toLocaleDateString('en-GB',{month:'short'})));
+      activityChart.append(group);
+    });
+    activityChart.setAttribute('aria-label',months.map(item => item.month + ': ' + item.enquiries + ' enquiries and ' + item.orders + ' orders').join('; '));
+  }
+  reportingPeriod.addEventListener('change',renderStatistics);
   function renderMetrics() {
     const stats = [
       ['Total enquiries',records.length,'all'],
@@ -324,6 +385,13 @@
       administrator=data.administrator || 'Administrator';
       orderMap=new Map((data.orders || []).map(order => [order.enquiry_id,order]));
       renderMetrics(); renderRecords();
+      try {
+        const result = await api({action:'statistics'});
+        businessStatistics = result.statistics;
+        renderStatistics();
+      } catch (statisticsError) {
+        analyticsCards.replaceChildren(el('p','admin-muted','Business statistics are temporarily unavailable: ' + statisticsError.message));
+      }
       status.textContent=administrator + ' · ' + records.length + ' enquiries · ' + (data.orders || []).length + ' orders';
     } catch(error) { status.textContent=error.message; }
   }
@@ -344,5 +412,5 @@
     await client.auth.signOut(); dashboard.hidden = true; sessionActions.hidden = true; login.hidden = false; orders.replaceChildren();
   });
   const { data: { session } } = await client.auth.getSession();
-  if (session) { login.hidden = true; dashboard.hidden = false; await refresh(); }
+  if (session) { login.hidden = true; dashboard.hidden = false; sessionActions.hidden = false; await refresh(); }
 })();
