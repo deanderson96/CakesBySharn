@@ -208,6 +208,12 @@ function clearEnquiry() {
   setMinimumDate();
   clearEnquiryError();
   renderBasket();
+  // A successfully submitted enquiry locks its button to prevent duplicates.
+  // Clearing the enquiry intentionally starts a fresh submission.
+  const submitButton = document.querySelector('#submit-online-enquiry');
+  if (submitButton) submitButton.disabled = false;
+  const result = document.querySelector('#online-enquiry-result');
+  if (result) result.textContent = '';
   showToast('Enquiry cleared.');
 }
 function buildMessage() {

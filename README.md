@@ -165,3 +165,7 @@ The public `submit-enquiry` Edge Function stores a pending enquiry and returns i
 The public endpoint includes an invisible honeypot and an atomic rolling rate limit of **three attempts per email address per hour**, keyed by a SHA-256 digest rather than raw email. This is basic abuse mitigation, **not** CAPTCHA or comprehensive IP-based anti-bot protection. Monitor spam and consider Turnstile before wider promotion. Enquiries are not orders; admin approval creates a separate order record.
 
 The site is enabled through `order-config.js` once the public Edge Function has been deployed. A live end-to-end browser test with a test customer is still required before relying on submissions.
+
+### Enquiry endpoint integration verification
+
+Run `python tests/live_submission.py` from an environment with internet access to create one **synthetic** enquiry and verify the actual hosted Supabase Edge Function, returning HTTP 201 and a `CBS-` reference. This creates a test database record that must be removed by an administrator after verification. GitHub Actions runs this live check only for push commits whose message includes `[live-enquiry-test]`. Regular browser checks use mocked responses and do not add records.

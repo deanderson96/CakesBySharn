@@ -115,3 +115,8 @@ begin
 end; $$;
 revoke all on function public.check_enquiry_rate_limit(text) from public, anon, authenticated;
 grant execute on function public.check_enquiry_rate_limit(text) to service_role;
+
+-- The server-side Edge Function needs table-level INSERT and SELECT grants for
+-- PostgREST insert(...).select('reference'). These do NOT grant browser access.
+grant usage on schema public to service_role;
+grant insert, select on table public.enquiries to service_role;

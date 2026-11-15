@@ -6,6 +6,7 @@ Run: pip install playwright && python -m playwright install chromium webkit
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from datetime import date, timedelta
 from threading import Thread
 from playwright.sync_api import sync_playwright
 
@@ -64,7 +65,7 @@ def run():
                         page.locator("#customer-name").fill("Test customer")
                         page.locator("#order-notes").fill("Chocolate drip cake with pink decoration")
                         page.locator("#customer-email").fill("test@example.com")
-                        page.locator("#preferred-date").fill("2026-12-20")
+                        page.locator("#preferred-date").fill((date.today() + timedelta(days=21)).isoformat())
                         page.locator("#submit-online-enquiry").click()
                         page.wait_for_function("document.querySelector('#online-enquiry-result').textContent.includes('CBS-TEST123456')")
                         receipt = page.locator("#online-enquiry-result").inner_text()
@@ -72,6 +73,8 @@ def run():
                         assert "Automatic acknowledgment emails are not available yet" in receipt, (engine, width, "manual email wording missing")
                         assert "not yet a confirmed order" in receipt, (engine, width, "order disclaimer missing")
                         page.locator("#clear-enquiry").click()
+                        assert page.locator("#submit-online-enquiry").is_enabled(), (engine, width, "new enquiry blocked after clearing")
+                        assert page.locator("#online-enquiry-result").inner_text() == "", (engine, width, "old reference still visible")
                         assert page.locator("#basket-count").text_content() == "0"
                         assert page.locator("#basket-items .basket-empty").is_visible(), (engine, width, "items not cleared")
                         assert page.locator("#basket-total").is_hidden(), (engine, width, "estimate not cleared")
