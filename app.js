@@ -231,16 +231,23 @@ function buildMessage() {
       if (line) rows.push(line);
       return rows;
     };
+    const priceWidth = 12;
+    const displayPrice = (item, quantity) => {
+      if (item.priceType === 'quote') return 'Quote';
+      const amount = formatter.format(item.price * quantity);
+      return item.priceType === 'from' ? 'From ' + amount : amount;
+    };
     lines.push('My choices:');
-    lines.push('Qty | ' + 'Item'.padEnd(itemWidth) + ' | Unit price');
-    lines.push('----+-' + '-'.repeat(itemWidth) + '-+------------');
+    lines.push('Qty | ' + 'Item'.padEnd(itemWidth) + ' | ' + 'Unit'.padEnd(priceWidth) + ' | Line total');
+    lines.push('----+-' + '-'.repeat(itemWidth) + '-+-' + '-'.repeat(priceWidth) + '-+------------');
     entries.forEach(([key, qty]) => {
       const item = ITEM_LOOKUP.get(key);
       const description = item.name + (item.detail ? ' (' + item.detail + ')' : '');
       wrapLabel(description).forEach((part, index) => {
         const quantity = index === 0 ? String(qty).padStart(3) : '   ';
-        const unitPrice = index === 0 ? priceText(item) : '';
-        lines.push(`${quantity} | ${part.padEnd(itemWidth)} | ${unitPrice}`);
+        const unitPrice = index === 0 ? displayPrice(item, 1) : '';
+        const lineTotal = index === 0 ? displayPrice(item, qty) : '';
+        lines.push(`${quantity} | ${part.padEnd(itemWidth)} | ${unitPrice.padEnd(priceWidth)} | ${lineTotal}`);
       });
     });
     lines.push('');

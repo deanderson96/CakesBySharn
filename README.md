@@ -10,7 +10,7 @@ A responsive static website for Cakes by Sharn, using the business's turquoise b
 - **Non-persistent basket:** selections are held in JavaScript memory only while the page is open. They are reset when the page is reloaded or reopened. The old localStorage basket key is deleted on load.
 - **In-page enquiry section** with normal document scrolling instead of a fixed modal/drawer, to avoid mobile keyboard, scroll-lock and frozen-panel issues.
 - Basic enquiry checks: either select a menu item or describe a custom request (at least 10 characters); dates in the past cannot be used.
-- **Email enquiry:** opens the customer's default email app with `cakesbysharnx@hotmail.com` pre-addressed, a subject, and a body containing a compact, plain-text item table (quantity, product and unit price), name, preferred date and requirements. The email deliberately excludes the estimated total, which remains visible only on the website. A copy-text fallback remains available if no email app is configured.
+- **Email enquiry:** opens the customer's default email app with `cakesbysharnx@hotmail.com` pre-addressed, a subject, and a body containing a compact, plain-text item table (quantity, product, unit price and per-item line total), name, preferred date and requirements. The email deliberately excludes the estimated total, which remains visible only on the website. A copy-text fallback remains available if no email app is configured.
 - Dynamic prices and explanatory text for items with quoted or starting prices.
 - SEO basics including canonical URL, Open Graph metadata, sitemap and robots.txt.
 

@@ -61,9 +61,10 @@ def run():
                         assert query.get("subject") == ["Cakes by Sharn - Order enquiry"], (engine, width, "wrong email subject")
                         email_body = query["body"][0]
                         assert "Qty | Item" in email_body, (engine, width, "email table missing")
-                        assert "Unit price" in email_body, (engine, width, "email table price heading missing")
+                        assert "Unit" in email_body and "Line total" in email_body, (engine, width, "email table headings missing")
                         assert "  2 | Banana loaf" in email_body, (engine, width, "email table quantity or item missing")
                         assert "| £5.00" in email_body, (engine, width, "email table unit price missing")
+                        assert "| £10.00" in email_body, (engine, width, "email line total missing")
                         assert "Estimated total" not in email_body, (engine, width, "total leaked into email")
                         assert "Estimate only" not in email_body, (engine, width, "pricing disclaimer leaked into email")
                         assert "Excludes items priced on request" not in email_body, (engine, width, "pricing caveat leaked into email")
@@ -73,6 +74,16 @@ def run():
                         page.locator("#copy-enquiry").click()
                         page.wait_for_function("Boolean(window.__lastCopied)")
                         assert page.evaluate("window.__lastCopied") == email_body, (engine, width, "copy and email contents differ")
+                        # From-price and quote-only products have no invented fixed totals.
+                        page.locator('[data-add="celebration-cakes:0"]').click()
+                        page.locator('[data-add="celebration-cakes:0"]').click()
+                        page.locator('[data-add="cupcakes:3"]').click()
+                        page.locator("#email-enquiry").click()
+                        mixed_body = parse_qs(urlsplit(page.evaluate("window.__lastMailto")).query)["body"][0]
+                        assert "From £45.00" in mixed_body, (engine, width, "starting unit price missing")
+                        assert "From £90.00" in mixed_body, (engine, width, "starting line total missing")
+                        assert "| Quote" in mixed_body, (engine, width, "quote-only product not labelled")
+                        assert "Estimated total" not in mixed_body, (engine, width, "email contains basket total")
                         page.locator("#clear-enquiry").click()
                         assert page.locator("#basket-count").text_content() == "0"
                         assert page.locator("#basket-items .basket-empty").is_visible(), (engine, width, "items not cleared")
