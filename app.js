@@ -154,8 +154,15 @@ function renderBasket() {
   }
   basketItemsElement.innerHTML = entries.map(([key, qty]) => {
     const item = ITEM_LOOKUP.get(key);
+    const linePrice = item.priceType === 'quote'
+      ? 'Price on request'
+      : `${item.priceType === 'from' ? 'From ' : ''}${formatter.format(item.price * qty)}`;
     return `<div class="basket-line">
-      <div><div class="basket-line-title">${item.name}</div><div class="basket-line-price">${priceText(item)}</div></div>
+      <div class="basket-line-info">
+        <div class="basket-line-title">${item.name}</div>
+        <div class="basket-line-price">${priceText(item)}${item.priceType === 'quote' ? '' : ' each'}</div>
+        <div class="basket-line-estimate">${linePrice} ${item.priceType === 'quote' ? '' : 'for ' + qty}</div>
+      </div>
       <div class="quantity-controls">
         <button type="button" data-quantity="${key}" data-delta="-1" aria-label="Remove one ${item.name}">−</button>
         <span>${qty}</span>
@@ -164,11 +171,15 @@ function renderBasket() {
     </div>`;
   }).join('');
 
-  const fixedItems = entries.filter(([key]) => ITEM_LOOKUP.get(key).priceType === 'fixed');
-  const fixedSubtotal = fixedItems.reduce((sum, [key, qty]) => sum + ITEM_LOOKUP.get(key).price * qty, 0);
-  const containsVariable = entries.some(([key]) => ITEM_LOOKUP.get(key).priceType !== 'fixed');
-  basketTotalElement.hidden = !fixedItems.length;
-  basketTotalElement.innerHTML = `Fixed-price items: ${formatter.format(fixedSubtotal)}${containsVariable ? '<small>Does not include made-to-order cakes or items requiring a quote.</small>' : '<small>Indicative only — all prices to be confirmed.</small>'}`;
+  const pricedEntries = entries.filter(([key]) => ITEM_LOOKUP.get(key).priceType !== 'quote');
+  const estimatedTotal = pricedEntries.reduce((sum, [key, qty]) => sum + ITEM_LOOKUP.get(key).price * qty, 0);
+  const containsStartingPrices = entries.some(([key]) => ITEM_LOOKUP.get(key).priceType === 'from');
+  const containsQuotes = entries.some(([key]) => ITEM_LOOKUP.get(key).priceType === 'quote');
+  basketTotalElement.hidden = false;
+  basketTotalElement.innerHTML = `<span class="estimate-total-label">${containsStartingPrices ? 'Estimated total from' : 'Estimated total'}</span>
+    <strong class="estimate-total-amount">${formatter.format(estimatedTotal)}</strong>
+    <small>${containsQuotes ? 'Excludes items priced on request. ' : ''}${containsStartingPrices ? 'Includes starting prices; final cake costs may be higher. ' : ''}Indicative only — Sharn will confirm the final price.</small>`;
+
 }
 function showToast(message) {
   toastElement.textContent = message;
@@ -209,6 +220,13 @@ function buildMessage() {
       const item = ITEM_LOOKUP.get(key);
       lines.push(`- ${qty} × ${item.name}${item.detail ? ` (${item.detail})` : ''} — ${priceText(item)}`);
     });
+    const priced = entries.filter(([key]) => ITEM_LOOKUP.get(key).priceType !== 'quote');
+    const estimate = priced.reduce((sum, [key, qty]) => sum + ITEM_LOOKUP.get(key).price * qty, 0);
+    const hasStarting = entries.some(([key]) => ITEM_LOOKUP.get(key).priceType === 'from');
+    const hasQuotes = entries.some(([key]) => ITEM_LOOKUP.get(key).priceType === 'quote');
+    lines.push(`${hasStarting ? 'Estimated total from' : 'Estimated total'}: ${formatter.format(estimate)}`);
+    if (hasQuotes) lines.push('Excludes items priced on request.');
+    lines.push('Estimate only — final pricing to be confirmed by Sharn.');
     lines.push('');
   }
   if (name) lines.push(`Name: ${name}`);
