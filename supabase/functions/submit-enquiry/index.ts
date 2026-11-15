@@ -54,7 +54,7 @@ Deno.serve(async request => {
       sendEmail(email, 'Cakes by Sharn enquiry received: ' + data.reference, 'Thanks for your enquiry!\n\n' + body + '\n\nSharn will confirm availability, date and final price. This is not a confirmed order.')
     ]);
     if (notifications.some(x => x.status === 'rejected')) console.error('Enquiry email delivery failed', data.reference);
-    return respond({ reference: data.reference }, 201);
+    return respond({ reference: data.reference, acknowledgmentEmailSent: notifications[1].status === 'fulfilled' }, 201);
   } catch (error) {
     console.error(error);
     return respond({ error: 'Unable to submit enquiry right now' }, 500);
