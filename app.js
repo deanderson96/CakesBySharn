@@ -323,7 +323,7 @@ for (const field of [notesField, dateField]) field.addEventListener('input', cle
 document.querySelector('#clear-enquiry').addEventListener('click', clearEnquiry);
 form.addEventListener('submit', event => {
   event.preventDefault();
-  document.querySelector('#email-enquiry').click();
+  if (onlineEnabled) document.querySelector('#submit-online-enquiry').click();
 });
 document.querySelector('#year').textContent = new Date().getFullYear();
 
@@ -348,9 +348,6 @@ document.addEventListener('click', event => {
   }
 });
 
-document.querySelector('#email-enquiry').addEventListener('click', prepareEmailEnquiry);
-document.querySelector('#whatsapp-enquiry').addEventListener('click', prepareWhatsAppEnquiry);
-document.querySelector('#copy-enquiry').addEventListener('click', copyMessage);
 const orderConfig = window.CAKES_ORDER_CONFIG || {};
 const onlineEnabled = Boolean(orderConfig.onlineSubmissionsEnabled === true && orderConfig.supabaseUrl && orderConfig.supabaseAnonKey);
 const fulfilmentField = document.querySelector('#fulfilment-method');
@@ -388,10 +385,10 @@ document.querySelector('#submit-online-enquiry').addEventListener('click', async
     if (!response.ok) throw new Error(result.error || 'Unable to send enquiry.');
     const acknowledgment = result.acknowledgmentEmailSent === true
       ? 'You should receive an acknowledgment email shortly. Please check your junk or spam folder if it does not arrive.'
-      : 'Automatic acknowledgment emails are not available yet. Please save your reference; our team will contact you by email or WhatsApp after reviewing your request.';
+      : 'Automatic acknowledgment emails are not available yet. Please save your reference; our team will contact you by email after reviewing your request.';
     status.textContent = 'Enquiry received! Thank you for contacting Cakes by Sharn. Your reference: ' + result.reference + '. ' + acknowledgment + ' This is not yet a confirmed order. Our team will review availability, pricing and the next steps.';
   } catch (error) {
-    status.textContent = error.message + ' Please use the email enquiry option below instead.';
+    status.textContent = error.message + ' Please try again later.';
     button.disabled = false;
   }
 });
