@@ -445,17 +445,17 @@
       paidDate.value=todayLondon();paidDate.max=todayLondon();
       const [amountWrap,amount]=field('Amount (£)','number');
       amount.min='0.01';amount.step='0.01';amount.max='1000000';
-      const methodLabel=el('label','','Method');
-      const method=document.createElement('select');
+      const paymentMethodLabel=el('label','','Payment method');
+      const paymentMethod=document.createElement('select');
       [['bank','Bank transfer'],['cash','Cash'],['card','Card'],['other','Other']].forEach(([value,label])=>{
-        const option=document.createElement('option');option.value=value;option.textContent=label;method.append(option);
+        const option=document.createElement('option');option.value=value;option.textContent=label;paymentMethod.append(option);
       });
-      methodLabel.append(method);
+      paymentMethodLabel.append(paymentMethod);
       const [referenceWrap,reference]=field('Payment reference','text',false);
       reference.maxLength=120;
       const record=el('button','button button-outline','Record financial entry');
       record.type='submit';
-      paymentForm.append(paymentTypeLabel,paidDateWrap,amountWrap,methodLabel,referenceWrap,record);
+      paymentForm.append(paymentTypeLabel,paidDateWrap,amountWrap,paymentMethodLabel,referenceWrap,record);
       paymentForm.addEventListener('submit',async event=>{
         event.preventDefault();
         if(!paymentForm.reportValidity())return;
@@ -464,7 +464,7 @@
         try{
           await api({action:'record-payment',id:order.id,eventType:paymentType.value,
             amountPence:Math.round(Number(amount.value)*100),date:paidDate.value,
-            method:method.value,reference:reference.value.trim()});
+            method:paymentMethod.value,reference:reference.value.trim()});
           amount.value='';reference.value='';
           await loadPaymentSummary();
           status.textContent='Financial entry recorded and audit-logged.';

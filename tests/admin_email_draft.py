@@ -153,7 +153,13 @@ def test():
                         "mfa_visible": page.locator("#admin-mfa").is_visible(),
                         "dashboard_visible": page.locator("#admin-dashboard").is_visible(),
                     }
+                    assert not errors, ("unexpected JavaScript errors", engine, errors)
                     page.locator(".admin-record-summary").click()
+                    assert page.locator(".admin-order-payment-form").count() == 1
+                    assert page.locator(".admin-order-payment-form select").count() == 2
+                    assert page.locator(".admin-order-payment-form label").filter(has_text="Payment method").count() == 1
+                    assert page.locator(".admin-order-payment-form select").nth(1).input_value() == "bank"
+
                     link = page.get_by_role("link", name="Open order confirmation via Email")
                     link.wait_for(state="visible", timeout=15000)
                     href = link.get_attribute("href")
