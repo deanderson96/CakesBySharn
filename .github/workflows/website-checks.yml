@@ -28,6 +28,17 @@ jobs:
       - name: Check admin email draft formatting
         run: python tests/admin_email_draft.py
 
+  hosted-api-negative-checks:
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reject malformed API requests without writing customer records
+        run: python tests/hosted_negative.py
+
   live-enquiry-check:
     if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[live-enquiry-test]') }}
     runs-on: ubuntu-24.04
