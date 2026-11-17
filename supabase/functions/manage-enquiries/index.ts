@@ -1,5 +1,6 @@
 import { cors, respond } from '../_shared/common.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { deliverNotification } from '../_shared/deliver-notification.ts';
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
@@ -37,6 +38,32 @@ Deno.serve(async (request) => {
     };
     const requireOwner = () => {
       if (administrator.role !== 'owner') throw new Error('Owner permissions required');
+    };
+    // Service-role client is used only after verifying user identity, AAL2 and
+    // active administrator membership; it is never exposed to the browser.
+    const service = () => createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const notifyDecision = async (enquiryId: string, retry = false) => {
+      const privileged = service();
+      const { data: enquiry, error } = await privileged.from('enquiries')
+        .select('id,reference,customer_name,customer_email,status,sharn_notes,fulfilment')
+        .eq('id', enquiryId).single();
+      if (error || !enquiry || !['confirmed','declined'].includes(enquiry.status))
+        throw new Error('No completed decision found');
+      if (enquiry.status === 'declined') {
+        return deliverNotification(privileged, enquiryId, enquiry.customer_email || '', {
+          kind: 'declined', name: enquiry.customer_name, reference: enquiry.reference,
+          reason: enquiry.sharn_notes || ''
+        }, retry);
+      }
+      const { data: order, error: orderError } = await privileged.from('orders')
+        .select('order_reference,agreed_date,agreed_time,total_pence,fulfilment')
+        .eq('enquiry_id', enquiryId).single();
+      if (orderError || !order) throw new Error('Approved order unavailable for email');
+      return deliverNotification(privileged, enquiryId, enquiry.customer_email || '', {
+        kind: 'approved', name: enquiry.customer_name, reference: enquiry.reference,
+        orderReference: order.order_reference, date: order.agreed_date, time: order.agreed_time,
+        amountPence: order.total_pence, fulfilment: order.fulfilment
+      }, retry);
     };
     const id = String(input.id || '');
     if (action === 'list') {
@@ -100,20 +127,31 @@ Deno.serve(async (request) => {
       }) });
     }
     if (!/^[0-9a-f-]{36}$/i.test(id)) return respond({ error: 'Invalid enquiry or order reference' }, 400);
+    if (action === 'retry-decision-email') {
+      const { data: previous, error } = await service().from('customer_email_notifications')
+        .select('status').eq('enquiry_id', id).in('kind', ['approved','declined']).maybeSingle();
+      if (error || !previous || previous.status !== 'failed')
+        return respond({ error: 'Only failed decision emails can be retried.' }, 409);
+      return respond({ notification: await notifyDecision(id, true) });
+    }
     if (action === 'confirm' || action === 'decline') {
       const date = String(input.confirmedDate || ''), time = String(input.confirmedTime || '');
       const total = Number(input.finalTotalPence), notes = String(input.notes || '').trim();
       if (notes.length > 1500 || (action === 'confirm' && (!/^\d{4}-\d{2}-\d{2}$/.test(date) ||
         time.length > 100 || !Number.isSafeInteger(total) || total < 0 || total > 100000000)))
         return respond({ error: 'Invalid order details' }, 400);
-      if (action === 'confirm' && input.detailsConfirmed !== true)
-        return respond({ error: 'Confirm that all order details have been agreed with the customer before approving.' }, 400);
-      return respond(await rpc('admin_decide_enquiry', {
+      if (action === 'confirm' && (input.detailsConfirmed !== true || input.customerContacted !== true))
+        return respond({ error: 'Confirm you have contacted the customer and agreed all order details before approving.' }, 400);
+      if (action === 'decline' && (notes.length < 10 || notes.length > 500))
+        return respond({ error: 'Provide a clear decline reason (10–500 characters) for the customer email.' }, 400);
+      const decision = await rpc('admin_decide_enquiry', {
         p_id: id, p_action: action, p_date: action === 'confirm' ? date : null,
         p_time: action === 'confirm' ? time : null,
         p_total_pence: action === 'confirm' ? total : null, p_notes: notes,
         p_details_confirmed: action === 'confirm'
-      }));
+      });
+      const notification = await notifyDecision(id);
+      return respond({ ...decision, notification });
     }
     if (action === 'log-reply') {
       const message = String(input.message || '').trim();
