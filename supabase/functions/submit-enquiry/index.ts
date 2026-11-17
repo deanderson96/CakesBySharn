@@ -82,10 +82,16 @@ Deno.serve(async request => {
       delivery_address: fulfilment === 'delivery' ? address : null, notes, items
     }).select('id,reference').single();
     if (error) throw error;
-    const delivery = await deliverNotification(database, data.id, email, {
-      kind: 'acknowledgment', name, reference: data.reference
-    });
-    return respond({ reference: data.reference, acknowledgmentEmailSent: delivery.sent }, 201);
+    let acknowledged = false;
+    try {
+      const delivery = await deliverNotification(database, data.id, email, {
+        kind: 'acknowledgment', name, reference: data.reference
+      });
+      acknowledged = delivery.sent;
+    } catch (deliveryError) {
+      console.error('Acknowledgment queue error', deliveryError);
+    }
+    return respond({ reference: data.reference, acknowledgmentEmailSent: acknowledged }, 201);
   } catch (error) {
     console.error(error);
     return respond({ error: 'Unable to submit enquiry right now' }, 500);
