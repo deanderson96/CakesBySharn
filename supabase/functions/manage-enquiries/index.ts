@@ -150,7 +150,9 @@ Deno.serve(async (request) => {
         p_total_pence: action === 'confirm' ? total : null, p_notes: notes,
         p_details_confirmed: action === 'confirm'
       });
-      const notification = await notifyDecision(id);
+      let notification = { sent: false, status: 'failed' };
+      try { notification = await notifyDecision(id); }
+      catch (deliveryError) { console.error('Decision notification queue error', deliveryError); }
       return respond({ ...decision, notification });
     }
     if (action === 'log-reply') {
