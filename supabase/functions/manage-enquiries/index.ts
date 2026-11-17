@@ -59,11 +59,16 @@ Deno.serve(async (request) => {
         .select('order_reference,agreed_date,agreed_time,total_pence,fulfilment')
         .eq('enquiry_id', enquiryId).single();
       if (orderError || !order) throw new Error('Approved order unavailable for email');
-      return deliverNotification(privileged, enquiryId, enquiry.customer_email || '', {
+      const delivery = await deliverNotification(privileged, enquiryId, enquiry.customer_email || '', {
         kind: 'approved', name: enquiry.customer_name, reference: enquiry.reference,
         orderReference: order.order_reference, date: order.agreed_date, time: order.agreed_time,
         amountPence: order.total_pence, fulfilment: order.fulfilment
       }, retry);
+      if (delivery.sent) {
+        try { await rpc('admin_mark_notified', { p_enquiry_id: enquiryId, p_method: 'email' }); }
+        catch (auditError) { console.error('Email sent, but order notification audit update failed', auditError); }
+      }
+      return delivery;
     };
     const id = String(input.id || '');
     if (action === 'list') {
