@@ -1,4 +1,4 @@
-import { cors, respond, db } from '../_shared/common.ts';
+import { cors, respond, db, withSiteCors } from '../_shared/common.ts';
 import { deliverNotification } from '../_shared/deliver-notification.ts';
 const catalog: Record<string, { name: string; price: number | null; type: string }> = {
   'afternoon-tea:0': { name: 'Individual afternoon tea', price: 900, type: 'fixed' },
@@ -21,7 +21,7 @@ const catalog: Record<string, { name: string; price: number | null; type: string
   'cupcakes:3': { name: 'Personalised cupcakes', price: null, type: 'quote' },
   'celebration-cakes:0': { name: '7-inch buttercream cake (Three layers)', price: 4500, type: 'from' }
 };
-Deno.serve(async request => {
+const handleRequest = async request => {
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (request.method !== 'POST') return respond({ error: 'Method not allowed' }, 405);
   try {
@@ -96,4 +96,5 @@ Deno.serve(async request => {
     console.error(error);
     return respond({ error: 'Unable to submit enquiry right now' }, 500);
   }
-});
+};
+Deno.serve(async request => withSiteCors(request, await handleRequest(request)));
