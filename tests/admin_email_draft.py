@@ -242,7 +242,7 @@ def test():
                                              json.loads(req.post_data or "{}").get("action") == "confirm") as approved_request:
                         page.get_by_role("button", name="Approve & create order").click()
                     assert json.loads(approved_request.value.post_data)["detailsConfirmed"] is True
-                    page.locator(".admin-decision-form").wait_for(state="detached")
+                    page.locator(".admin-decision-form").wait_for(state="hidden")
                     page.locator(".admin-state-pending").wait_for(state="visible")
                     page.locator(".admin-record-summary").click()
                     assert not page.locator(".admin-decision-form input[type=checkbox]").is_checked()
