@@ -15,10 +15,29 @@ jobs:
         run: |
           python -m pip install playwright==1.57.0
           python -m playwright install --with-deps chromium webkit
+      - name: Validate JavaScript syntax and catalogue parity
+        run: |
+          node --check catalog.js
+          node --check app.js
+          node --check admin.js
+          node tests/catalog-parity.cjs
+      - name: Validate architecture contracts
+        run: python tests/architecture_contracts.py
       - name: Run responsive browser checks
         run: python tests/smoke.py
       - name: Check admin email draft formatting
         run: python tests/admin_email_draft.py
+
+  hosted-api-negative-checks:
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reject malformed API requests without writing customer records
+        run: python tests/hosted_negative.py
 
   live-enquiry-check:
     if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[live-enquiry-test]') }}
