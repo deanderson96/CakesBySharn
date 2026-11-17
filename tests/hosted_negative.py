@@ -10,8 +10,8 @@ from urllib.request import Request, urlopen
 
 root = Path(__file__).resolve().parents[1]
 config = (root / 'order-config.js').read_text()
-url_match = re.search(r"supabaseUrl:\\s*'([^']+)'", config)
-key_match = re.search(r"supabaseAnonKey:\\s*'([^']+)'", config)
+url_match = re.search(r"supabaseUrl:\s*'([^']+)'", config)
+key_match = re.search(r"supabaseAnonKey:\s*'([^']+)'", config)
 assert url_match and key_match, 'Missing public Supabase configuration'
 base = url_match.group(1)
 key = key_match.group(1)
