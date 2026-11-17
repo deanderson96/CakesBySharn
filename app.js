@@ -44,6 +44,16 @@ function showEnquiryError(message, field) {
 function validateEnquiry() {
   clearEnquiryError();
   setMinimumDate();
+  const email = emailField.value.trim();
+  const mobile = normalizedUkMobile(mobileField.value.trim());
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254) {
+    showEnquiryError('Enter a valid email address.', emailField);
+    return false;
+  }
+  if (!/^\\+447[1-57-9]\\d{8}$/.test(mobile)) {
+    showEnquiryError('Enter a valid UK mobile number, such as 07700 900123.', mobileField);
+    return false;
+  }
   if (!Object.keys(cart).length && notesField.value.trim().length < 10) {
     showEnquiryError('Add an item or describe your request in at least 10 characters.', notesField);
     return false;
