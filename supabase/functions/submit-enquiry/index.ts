@@ -33,16 +33,15 @@ Deno.serve(async request => {
     // Invisible field catches simple form-filling bots without exposing an error.
     if (String(input.website || '').trim()) return respond({ error: 'Unable to submit enquiry right now' }, 400);
     const name = String(input.name || '').trim();
-    const contactMethod = String(input.contactMethod || 'email');
+    const contactMethod = 'email';
     const email = String(input.email || '').trim();
     const rawMobile = String(input.mobile || '').trim();
     const compactMobile = rawMobile.replace(/[\s().-]/g, '');
     const mobile = compactMobile.startsWith('07') ? '+44' + compactMobile.slice(1) : compactMobile;
-    if (!['email', 'sms', 'whatsapp'].includes(contactMethod)) return respond({ error: 'Choose a contact method.' }, 400);
     if (name.length < 1 || name.length > 120) return respond({ error: 'Enter your name (up to 120 characters).' }, 400);
-    if (contactMethod === 'email' && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254))
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254)
       return respond({ error: 'Enter a valid email address.' }, 400);
-    if (contactMethod !== 'email' && (rawMobile.length > 40 || !/^\+447[1-57-9]\d{8}$/.test(mobile)))
+    if (rawMobile.length > 40 || !/^\+447[1-57-9]\d{8}$/.test(mobile))
       return respond({ error: 'Enter a valid UK mobile number, e.g. 07700 900123.' }, 400);
     const date = String(input.preferredDate || '');
     const notes = String(input.notes || '').trim();
@@ -68,7 +67,7 @@ Deno.serve(async request => {
     });
     if (!items.length && notes.length < 10) return respond({ error: 'Select items or describe your request' }, 400);
     // A rolling per-email limit provides basic abuse mitigation. No raw email is stored in the limiter.
-    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(contactMethod === 'email' ? 'email:' + email.toLowerCase() : 'mobile:' + mobile));
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('email:' + email.toLowerCase()));
     const key = Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('');
     const database = db();
     const { data: permitted, error: rateError } = await database.rpc('check_enquiry_rate_limit', { p_key: key });
@@ -76,8 +75,8 @@ Deno.serve(async request => {
     if (!permitted) return respond({ error: 'Too many enquiries from this contact address or number. Please try again later.' }, 429);
     const { data, error } = await database.from('enquiries').insert({
       customer_name: name, contact_method: contactMethod,
-      customer_email: contactMethod === 'email' ? email : null,
-      customer_mobile: contactMethod === 'email' ? null : mobile,
+      customer_email: email,
+      customer_mobile: mobile,
       preferred_date: date, fulfilment,
       delivery_address: fulfilment === 'delivery' ? address : null, notes, items
     }).select('reference').single();

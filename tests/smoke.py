@@ -63,13 +63,15 @@ def run():
                         page.locator("#basket-trigger").click()
                         assert "#enquiry" in page.url, (engine, width, "enquiry navigation")
                         assert page.locator("#contact-email-field").is_visible()
-                        assert page.locator("#contact-mobile-field").is_hidden()
-                        page.locator("#contact-method").select_option("whatsapp")
-                        assert page.locator("#contact-email-field").is_hidden()
                         assert page.locator("#contact-mobile-field").is_visible()
+                        assert page.locator("#contact-method").count() == 0
+                        page.locator("#customer-email").fill("not-an-email")
                         page.locator("#customer-mobile").fill("07123")
                         page.locator("#customer-name").fill("Test customer")
                         page.locator("#order-notes").fill("Chocolate drip cake with pink decoration")
+                        page.locator("#submit-online-enquiry").click()
+                        assert page.locator("#enquiry-error").is_visible(), (engine, width, "invalid email accepted")
+                        page.locator("#customer-email").fill("customer@example.com")
                         page.locator("#submit-online-enquiry").click()
                         assert "UK mobile" in page.locator("#enquiry-error").inner_text(), (engine, width, "invalid UK mobile accepted")
                         page.locator("#customer-mobile").fill("07700 900123")
@@ -78,7 +80,7 @@ def run():
                         page.wait_for_function("document.querySelector('#online-enquiry-result').textContent.includes('CBS-TEST123456')")
                         receipt = page.locator("#online-enquiry-result").inner_text()
                         assert "Enquiry received!" in receipt, (engine, width, "receipt missing")
-                        assert "WhatsApp" in receipt, (engine, width, "preferred contact missing")
+                        assert "details provided" in receipt, (engine, width, "contact wording missing")
                         assert "Automatic acknowledgments are not available yet" in receipt, (engine, width, "manual email wording missing")
                         assert "not yet a confirmed order" in receipt, (engine, width, "order disclaimer missing")
                         page.locator("#clear-enquiry").click()
@@ -87,8 +89,9 @@ def run():
                         assert page.locator("#basket-count").text_content() == "0"
                         assert page.locator("#basket-items .basket-empty").is_visible(), (engine, width, "items not cleared")
                         assert page.locator("#basket-total").is_hidden(), (engine, width, "estimate not cleared")
-                        assert page.locator("#contact-method").input_value() == "email"
-                        assert page.locator("#contact-mobile-field").is_hidden()
+                        assert page.locator("#customer-email").input_value() == ""
+                        assert page.locator("#customer-mobile").input_value() == ""
+                        assert page.locator("#contact-mobile-field").is_visible()
                         assert page.locator("#customer-name").input_value() == ""
                         assert page.locator("#order-notes").input_value() == ""
                         page.locator("#submit-online-enquiry").click()
