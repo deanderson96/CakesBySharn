@@ -31,7 +31,7 @@ Test these against a disposable/staging database rather than modifying productio
 
 ## Current security findings
 
-Supabase flags 15 authenticated-callable SECURITY DEFINER RPCs. Those APIs are intentional and currently call `assert_admin_mfa()`; do not revoke them indiscriminately or replace the guard without equivalent checks. Keep privilege assertions under test. RLS no-policy notices for internal rate-limit and maintenance tables are intentional (deny-by-default). Leaked-password protection is currently disabled and needs enabling in the Supabase dashboard. Performance notices include two accounting foreign-key indexes and some RLS initplan findings.
+Supabase flags 15 authenticated-callable SECURITY DEFINER RPCs. Those APIs are intentional and currently call `assert_admin_mfa()`; do not revoke them indiscriminately or replace the guard without equivalent checks. Keep privilege assertions under test. RLS no-policy notices for internal rate-limit and maintenance tables are intentional (deny-by-default). Leaked-password protection is currently disabled and needs enabling in the Supabase dashboard. Accounting foreign-key indexes were added in migration 20261117213141; remaining performance findings include RLS initplan warnings.
 
 ## Known improvement targets
 
