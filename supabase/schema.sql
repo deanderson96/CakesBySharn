@@ -1,3 +1,7 @@
+-- LEGACY BOOTSTRAP SNAPSHOT — DO NOT APPLY TO AN EXISTING PROJECT.
+-- The canonical versioned schema is in supabase/migrations/.
+-- This file is retained only for historical reference.
+
 -- Apply in Supabase SQL editor before enabling online submissions.
 create table if not exists public.enquiries (
   id uuid primary key default gen_random_uuid(),

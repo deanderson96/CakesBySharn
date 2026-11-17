@@ -24,8 +24,12 @@ Deno.serve(async request => {
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (request.method !== 'POST') return respond({ error: 'Method not allowed' }, 405);
   try {
-    if (Number(request.headers.get('content-length') || 0) > 16000) return respond({ error: 'Request too large' }, 413);
-    const input = await request.json();
+    // Content-Length can be absent or misleading; enforce the limit on the actual body.
+    const raw = await request.text();
+    if (new TextEncoder().encode(raw).byteLength > 16000) return respond({ error: 'Request too large' }, 413);
+    let input: Record<string, any>;
+    try { input = JSON.parse(raw); } catch { return respond({ error: 'Invalid JSON' }, 400); }
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return respond({ error: 'Invalid request' }, 400);
     // Invisible field catches simple form-filling bots without exposing an error.
     if (String(input.website || '').trim()) return respond({ error: 'Unable to submit enquiry right now' }, 400);
     const name = String(input.name || '').trim();
@@ -44,9 +48,19 @@ Deno.serve(async request => {
     const notes = String(input.notes || '').trim();
     const fulfilment = input.fulfilment;
     const address = String(input.deliveryAddress || '').trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date)) || date < new Date().toISOString().slice(0, 10)) return respond({ error: 'A future date is required' }, 400);
+    const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(date + 'T00:00:00Z') : new Date(NaN);
+    const todayInLondon = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    if (Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== date || date < todayInLondon)
+      return respond({ error: 'A valid current or future date is required' }, 400);
     if (!['collection', 'delivery'].includes(fulfilment) || (fulfilment === 'delivery' && (address.length < 10 || address.length > 500))) return respond({ error: 'Valid collection or delivery details required' }, 400);
     if (notes.length > 3000 || !Array.isArray(input.items) || input.items.length > 40) return respond({ error: 'Invalid enquiry' }, 400);
+    if (input.items.some((entry: unknown) => !entry || typeof entry !== 'object' || Array.isArray(entry) ||
+      typeof (entry as { key?: unknown }).key !== 'string' ||
+      !catalog[(entry as { key: string }).key] ||
+      !Number.isInteger((entry as { quantity?: unknown }).quantity) ||
+      Number((entry as { quantity: number }).quantity) < 1 ||
+      Number((entry as { quantity: number }).quantity) > 50))
+      return respond({ error: 'Invalid item' }, 400);
     const items = input.items.map((entry: { key: string; quantity: number }) => {
       const product = catalog[entry.key];
       if (!product || !Number.isInteger(entry.quantity) || entry.quantity < 1 || entry.quantity > 50) throw Error('Invalid item');

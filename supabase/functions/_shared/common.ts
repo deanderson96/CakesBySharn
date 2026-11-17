@@ -3,7 +3,9 @@ export const cors = {
   'Access-Control-Allow-Origin': Deno.env.get('SITE_ORIGIN') || 'https://deanderson96.github.io',
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Content-Type': 'application/json'
+  'Content-Type': 'application/json',
+  'Cache-Control': 'no-store',
+  'X-Content-Type-Options': 'nosniff'
 };
 export const respond = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: cors });
 export const db = () => createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);

@@ -15,6 +15,14 @@ jobs:
         run: |
           python -m pip install playwright==1.57.0
           python -m playwright install --with-deps chromium webkit
+      - name: Validate JavaScript syntax and catalogue parity
+        run: |
+          node --check catalog.js
+          node --check app.js
+          node --check admin.js
+          node tests/catalog-parity.cjs
+      - name: Validate architecture contracts
+        run: python tests/architecture_contracts.py
       - name: Run responsive browser checks
         run: python tests/smoke.py
       - name: Check admin email draft formatting
