@@ -132,6 +132,25 @@ const handleRequest = async (request) => {
       }) });
     }
     if (!/^[0-9a-f-]{36}$/i.test(id)) return respond({ error: 'Invalid enquiry or order reference' }, 400);
+    // MFA-protected backfill for acknowledgments that failed before the
+    // service-role audit permissions were corrected. Never re-send if already
+    // sent or currently in progress; uniqueness is also enforced in the DB.
+    if (action === 'retry-acknowledgment-email') {
+      const privileged = service();
+      const { data: enquiry, error: enquiryError } = await privileged.from('enquiries')
+        .select('id,reference,customer_name,customer_email')
+        .eq('id', id).single();
+      if (enquiryError || !enquiry) return respond({ error: 'Enquiry not found.' }, 404);
+      const { data: existing, error: auditError } = await privileged.from('customer_email_notifications')
+        .select('status').eq('enquiry_id', id).eq('kind', 'acknowledgment').maybeSingle();
+      if (auditError) throw auditError;
+      if (existing && existing.status !== 'failed')
+        return respond({ error: 'Acknowledgment is already queued or sent.' }, 409);
+      const notification = await deliverNotification(privileged, id, enquiry.customer_email || '', {
+        kind: 'acknowledgment', name: enquiry.customer_name, reference: enquiry.reference
+      }, existing?.status === 'failed');
+      return respond({ notification });
+    }
     if (action === 'retry-decision-email') {
       const { data: previous, error } = await service().from('customer_email_notifications')
         .select('status').eq('enquiry_id', id).in('kind', ['approved','declined']).maybeSingle();
