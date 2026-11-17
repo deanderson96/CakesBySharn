@@ -1,0 +1,1 @@
+grant usage on schema public to service_role; grant insert (customer_name, customer_email, preferred_date, fulfilment, delivery_address, notes, items), select (reference) on public.enquiries to service_role;
