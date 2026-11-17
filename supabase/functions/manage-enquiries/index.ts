@@ -108,7 +108,7 @@ Deno.serve(async (request) => {
         return respond({ error: 'Invalid order details' }, 400);
       if (action === 'confirm' && input.detailsConfirmed !== true)
         return respond({ error: 'Confirm that all order details have been agreed with the customer before approving.' }, 400);
-      return respond(await rpc('admin_decide_enquiry_attested', {
+      return respond(await rpc('admin_decide_enquiry', {
         p_id: id, p_action: action, p_date: action === 'confirm' ? date : null,
         p_time: action === 'confirm' ? time : null,
         p_total_pence: action === 'confirm' ? total : null, p_notes: notes,
