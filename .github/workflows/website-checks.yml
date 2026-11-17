@@ -23,6 +23,8 @@ jobs:
           node tests/catalog-parity.cjs
       - name: Validate architecture contracts
         run: python tests/architecture_contracts.py
+      - name: Validate transactional email contracts
+        run: python tests/test_customer_email_notifications.py
       - name: Run responsive browser checks
         run: python tests/smoke.py
       - name: Check admin email draft formatting

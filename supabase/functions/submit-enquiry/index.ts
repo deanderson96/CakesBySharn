@@ -1,4 +1,5 @@
 import { cors, respond, db } from '../_shared/common.ts';
+import { deliverNotification } from '../_shared/deliver-notification.ts';
 const catalog: Record<string, { name: string; price: number | null; type: string }> = {
   'afternoon-tea:0': { name: 'Individual afternoon tea', price: 900, type: 'fixed' },
   'afternoon-tea:1': { name: 'Afternoon tea for 2', price: 1600, type: 'fixed' },
@@ -79,10 +80,18 @@ Deno.serve(async request => {
       customer_mobile: mobile,
       preferred_date: date, fulfilment,
       delivery_address: fulfilment === 'delivery' ? address : null, notes, items
-    }).select('reference').single();
+    }).select('id,reference').single();
     if (error) throw error;
-    // Email is handled manually through Hotmail/WhatsApp until a sender is configured.
-    return respond({ reference: data.reference, acknowledgmentEmailSent: false }, 201);
+    let acknowledged = false;
+    try {
+      const delivery = await deliverNotification(database, data.id, email, {
+        kind: 'acknowledgment', name, reference: data.reference
+      });
+      acknowledged = delivery.sent;
+    } catch (deliveryError) {
+      console.error('Acknowledgment queue error', deliveryError);
+    }
+    return respond({ reference: data.reference, acknowledgmentEmailSent: acknowledged }, 201);
   } catch (error) {
     console.error(error);
     return respond({ error: 'Unable to submit enquiry right now' }, 500);

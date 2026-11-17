@@ -493,28 +493,62 @@
       agreementLabel.append(agreementConfirmed,document.createTextNode(
         'I confirm that I have discussed and agreed all order details, including the final price, date and collection/delivery arrangements, with the customer.'
       ));
+      const contactedLabel = el('label','admin-approval-attestation');
+      const customerContacted = document.createElement('input');
+      customerContacted.type = 'checkbox';
+      customerContacted.required = true;
+      contactedLabel.append(customerContacted, document.createTextNode(
+        'I confirm that I have personally contacted the customer before approving this order.'
+      ));
+      const [reasonWrap,declineReason] = field('Reason for declining (sent to customer by email)','text',false);
+      declineReason.maxLength = 500;
+      declineReason.placeholder = 'Explain why the request cannot be accepted (at least 10 characters)';
+      reasonWrap.style.gridColumn = '1 / -1';
       const approve = el('button','button button-primary','Approve & create order');
       approve.type='submit';
       const decline = el('button','button button-outline','Decline enquiry');
       decline.type='button';
       const actions = el('div','admin-actions');
       actions.append(approve,decline);
-      form.append(dateWrap,timeWrap,priceWrap,noteWrap,agreementLabel,actions);
+      form.append(dateWrap,timeWrap,priceWrap,noteWrap,agreementLabel,contactedLabel,reasonWrap,actions);
       async function decide(action) {
         if (action === 'confirm' && !form.reportValidity()) return;
-        if (!window.confirm(action === 'confirm' ? 'Approve this enquiry and create an order? You must notify the customer separately.' : 'Decline this enquiry? You must notify the customer separately.')) return;
+        if (action === 'decline' && declineReason.value.trim().length < 10) {
+          status.textContent = 'Enter a decline reason of at least 10 characters before sending the customer email.';
+          declineReason.focus();
+          return;
+        }
+        if (!window.confirm(action === 'confirm' ? 'Approve this enquiry and send the customer an order confirmation email?' : 'Decline this enquiry and email the reason to the customer?')) return;
         approve.disabled=decline.disabled=true;
         status.textContent='Processing ' + enquiry.reference + '…';
         try {
-          await api({action,id:enquiry.id,confirmedDate:date.value,confirmedTime:time.value,
-            finalTotalPence:Math.round(Number(price.value)*100),notes:note.value,
-             detailsConfirmed:action==='confirm' && agreementConfirmed.checked});
+          const result = await api({action,id:enquiry.id,confirmedDate:date.value,confirmedTime:time.value,
+            finalTotalPence:Math.round(Number(price.value)*100),
+            notes:action==='decline' ? declineReason.value.trim() : note.value,
+            detailsConfirmed:action==='confirm' && agreementConfirmed.checked,
+            customerContacted:action==='confirm' && customerContacted.checked});
           await refresh();
+          if (!result.notification || !result.notification.sent) {
+            window.alert('Decision saved, but the customer email was not sent. Use Retry decision email on the enquiry to try again.');
+          }
         } catch(error) { status.textContent=error.message; approve.disabled=decline.disabled=false; }
       }
       form.addEventListener('submit', event => { event.preventDefault(); decide('confirm'); });
       decline.addEventListener('click', () => decide('decline'));
       actionBox.append(form); panel.append(actionBox);
+    }
+    if (enquiry.status === 'confirmed' || enquiry.status === 'declined') {
+      const retry = el('button','button button-outline','Retry failed decision email');
+      retry.type='button';
+      retry.addEventListener('click', async () => {
+        retry.disabled=true;
+        try {
+          const result = await api({action:'retry-decision-email',id:enquiry.id});
+          window.alert(result.notification?.sent ? 'Customer email sent.' : 'Email was not sent. Please try again later.');
+        } catch(error) { window.alert(error.message); }
+        finally { retry.disabled=false; }
+      });
+      panel.append(retry);
     }
     details.append(panel);
     return details;
