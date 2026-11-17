@@ -46,11 +46,11 @@ function validateEnquiry() {
   setMinimumDate();
   const email = emailField.value.trim();
   const mobile = normalizedUkMobile(mobileField.value.trim());
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     showEnquiryError('Enter a valid email address.', emailField);
     return false;
   }
-  if (!/^\\+447[1-57-9]\\d{8}$/.test(mobile)) {
+  if (!/^\+447[1-57-9]\d{8}$/.test(mobile)) {
     showEnquiryError('Enter a valid UK mobile number, such as 07700 900123.', mobileField);
     return false;
   }
