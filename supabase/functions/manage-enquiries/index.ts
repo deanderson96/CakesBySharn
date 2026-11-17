@@ -79,7 +79,10 @@ const handleRequest = async (request) => {
       const data = await rpc('admin_paginated_enquiries', {
         p_offset: offset, p_limit: limit, p_status: selected, p_search: search
       });
-      return respond({ ...data, administrator: administrator.display_name, adminRole: administrator.role });
+      // Only after JWT, AAL2 and active admin checks. Report configuration
+      // presence only; never expose API keys or connection secrets.
+      return respond({ ...data, administrator: administrator.display_name, adminRole: administrator.role,
+        emailSecretConfigured: Boolean(Deno.env.get('RESEND_API_KEY')?.trim()) });
     }
     if (action === 'statistics') return respond({ statistics: await rpc('admin_business_statistics') });
     if (action === 'tax-year-report') {
