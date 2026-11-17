@@ -106,10 +106,13 @@ Deno.serve(async (request) => {
       if (notes.length > 1500 || (action === 'confirm' && (!/^\d{4}-\d{2}-\d{2}$/.test(date) ||
         time.length > 100 || !Number.isSafeInteger(total) || total < 0 || total > 100000000)))
         return respond({ error: 'Invalid order details' }, 400);
-      return respond(await rpc('admin_decide_enquiry', {
+      if (action === 'confirm' && input.detailsConfirmed !== true)
+        return respond({ error: 'Confirm that all order details have been agreed with the customer before approving.' }, 400);
+      return respond(await rpc('admin_decide_enquiry_attested', {
         p_id: id, p_action: action, p_date: action === 'confirm' ? date : null,
         p_time: action === 'confirm' ? time : null,
-        p_total_pence: action === 'confirm' ? total : null, p_notes: notes
+        p_total_pence: action === 'confirm' ? total : null, p_notes: notes,
+        p_details_confirmed: action === 'confirm'
       }));
     }
     if (action === 'log-reply') {

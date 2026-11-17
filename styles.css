@@ -594,6 +594,8 @@ input[aria-invalid="true"] { border-color:#ad4343!important; outline-color:#ad43
 .admin-decision-form { display:grid!important; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:end; gap:14px; }
 .admin-decision-form label { display:flex; flex-direction:column; gap:7px; font-size:13px; font-weight:700; }
 .admin-decision-form input { width:100%; box-sizing:border-box; border:1px solid #cbdad3; border-radius:9px; padding:11px; min-height:44px; font:inherit; }
+.admin-decision-form .admin-approval-attestation { grid-column:1/-1; display:flex; flex-direction:row; align-items:flex-start; gap:10px; font-weight:500; line-height:1.5; }
+.admin-decision-form .admin-approval-attestation input[type="checkbox"] { width:18px; height:18px; min-height:18px; flex:none; margin:2px 0 0; accent-color:#087d7b; }
 .admin-decision-form .admin-actions { grid-column:1/-1; }
 .admin-live-status { color:#537269; padding:16px 3px; min-height:24px; font-size:13px; }
 .admin-empty { padding:28px; text-align:center; color:#758b82; }

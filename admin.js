@@ -486,13 +486,20 @@
       price.min='0'; price.step='0.01';
       price.value = (estimatePrices(enquiry.items || []).total / 100).toFixed(2);
       const [noteWrap,note] = field('Internal order notes','text',false);
+      const agreementLabel = el('label','admin-approval-attestation');
+      const agreementConfirmed = document.createElement('input');
+      agreementConfirmed.type = 'checkbox';
+      agreementConfirmed.required = true;
+      agreementLabel.append(agreementConfirmed,document.createTextNode(
+        'I confirm that I have discussed and agreed all order details, including the final price, date and collection/delivery arrangements, with the customer.'
+      ));
       const approve = el('button','button button-primary','Approve & create order');
       approve.type='submit';
       const decline = el('button','button button-outline','Decline enquiry');
       decline.type='button';
       const actions = el('div','admin-actions');
       actions.append(approve,decline);
-      form.append(dateWrap,timeWrap,priceWrap,noteWrap,actions);
+      form.append(dateWrap,timeWrap,priceWrap,noteWrap,agreementLabel,actions);
       async function decide(action) {
         if (action === 'confirm' && !form.reportValidity()) return;
         if (!window.confirm(action === 'confirm' ? 'Approve this enquiry and create an order? You must notify the customer separately.' : 'Decline this enquiry? You must notify the customer separately.')) return;
@@ -500,7 +507,8 @@
         status.textContent='Processing ' + enquiry.reference + '…';
         try {
           await api({action,id:enquiry.id,confirmedDate:date.value,confirmedTime:time.value,
-            finalTotalPence:Math.round(Number(price.value)*100),notes:note.value});
+            finalTotalPence:Math.round(Number(price.value)*100),notes:note.value,
+             detailsConfirmed:action==='confirm' && agreementConfirmed.checked});
           await refresh();
         } catch(error) { status.textContent=error.message; approve.disabled=decline.disabled=false; }
       }

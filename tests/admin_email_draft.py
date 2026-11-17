@@ -78,6 +78,7 @@ def test():
                         status=200, content_type="application/javascript",
                         headers={"Access-Control-Allow-Origin": "*"},
                         body=FAKE_SUPABASE_MODULE))
+                    fixture = {"list": FAKE_LIST}
                     def admin_response(route):
                         action = json.loads(route.request.post_data or "{}").get("action")
                         if action == "statistics":
@@ -124,6 +125,9 @@ def test():
                                 "evidence_reference":"INV123","amount_pence":200}]}}
                         elif action in ("record-expense","record-payment"):
                             data = {"recorded":True}
+                        elif action in ("confirm", "decline"):
+                            data = {"status": "confirmed" if action == "confirm" else "declined",
+                                    "orderReference": "CBS-ORD-1234567890"}
                         elif action == "accounting-export":
                             data = {"orders": [{
                                 "order_reference": "CBS-ORD-ARCHIVED",
@@ -136,7 +140,7 @@ def test():
                                 "archived": True
                             }]}
                         else:
-                            data = FAKE_LIST
+                            data = fixture["list"]
                         route.fulfill(status=200, content_type="application/json",
                                       headers={"Access-Control-Allow-Origin": "*",
                                                "Access-Control-Allow-Headers": "authorization, apikey, content-type",
@@ -213,6 +217,39 @@ def test():
                     assert "10.00" in ledger_csv and "-2.00" in ledger_csv
                     assert page.locator(".admin-record").count() == 1
                     assert page.locator(".admin-state-confirmed").inner_text() == "Approved"
+
+                    # Approval must require explicit customer-agreement attestation.
+                    pending = json.loads(json.dumps(FAKE_LIST))
+                    pending["enquiries"][0]["status"] = "pending"
+                    pending["orders"] = []
+                    pending["counts"] = {"pending": 1, "confirmed": 0, "declined": 0}
+                    fixture["list"] = pending
+                    page.locator("#admin-refresh").click()
+                    page.locator(".admin-state-pending").wait_for(state="visible")
+                    page.locator(".admin-record-summary").click()
+                    form = page.locator(".admin-decision-form")
+                    checkbox = form.locator("input[type=checkbox]")
+                    assert not checkbox.is_checked()
+                    assert "agreed all order details" in form.inner_text()
+                    form.locator("input[type=text]").first.fill("3-4PM")
+                    assert not form.evaluate("(form) => form.checkValidity()"), "unchecked agreement should block approval"
+                    page.on("dialog", lambda dialog: dialog.accept())
+                    page.get_by_role("button", name="Approve & create order").click()
+                    assert not checkbox.is_checked()
+                    checkbox.check()
+                    assert form.evaluate("(form) => form.checkValidity()"), "confirmed agreement should allow approval"
+                    with page.expect_request(lambda req: req.url.endswith("/functions/v1/manage-enquiries") and
+                                             json.loads(req.post_data or "{}").get("action") == "confirm") as approved_request:
+                        page.get_by_role("button", name="Approve & create order").click()
+                    assert json.loads(approved_request.value.post_data)["detailsConfirmed"] is True
+                    page.locator(".admin-decision-form").wait_for(state="detached")
+                    page.locator(".admin-state-pending").wait_for(state="visible")
+                    page.locator(".admin-record-summary").click()
+                    assert not page.locator(".admin-decision-form input[type=checkbox]").is_checked()
+                    with page.expect_request(lambda req: req.url.endswith("/functions/v1/manage-enquiries") and
+                                             json.loads(req.post_data or "{}").get("action") == "decline") as declined_request:
+                        page.get_by_role("button", name="Decline enquiry").click()
+                    assert json.loads(declined_request.value.post_data)["detailsConfirmed"] is False
                     assert not errors, (engine, errors)
                     page.close()
                     print(f"PASS {engine}: admin order email uses proper line breaks")
