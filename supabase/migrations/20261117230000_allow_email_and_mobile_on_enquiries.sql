@@ -6,10 +6,10 @@ alter table public.enquiries add constraint enquiries_contact_details_check chec
   (
     contact_method = 'email'
     and customer_email is not null
-    and (customer_mobile is null or customer_mobile ~ '^\\+447[1-57-9][0-9]{8}$')
+    and (customer_mobile is null or customer_mobile ~ '^[+]447[1-57-9][0-9]{8}$')
   )
   or (
     contact_method in ('sms', 'whatsapp')
-    and customer_mobile ~ '^\\+447[1-57-9][0-9]{8}$'
+    and customer_mobile ~ '^[+]447[1-57-9][0-9]{8}$'
   )
 );
