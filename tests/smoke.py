@@ -81,7 +81,7 @@ def run():
                         receipt = page.locator("#online-enquiry-result").inner_text()
                         assert "Enquiry received!" in receipt, (engine, width, "receipt missing")
                         assert "details provided" in receipt, (engine, width, "contact wording missing")
-                        assert "Automatic acknowledgments are not available yet" in receipt, (engine, width, "manual email wording missing")
+                        assert "could not confirm" in receipt, (engine, width, "manual email wording missing")
                         assert "not yet a confirmed order" in receipt, (engine, width, "order disclaimer missing")
                         page.locator("#clear-enquiry").click()
                         assert page.locator("#submit-online-enquiry").is_enabled(), (engine, width, "new enquiry blocked after clearing")
