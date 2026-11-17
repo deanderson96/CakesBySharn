@@ -228,28 +228,35 @@ def test():
                     page.locator(".admin-state-pending").wait_for(state="visible")
                     page.locator(".admin-record-summary").click()
                     form = page.locator(".admin-decision-form")
-                    checkbox = form.locator("input[type=checkbox]")
-                    assert not checkbox.is_checked()
+                    checkboxes = form.locator("input[type=checkbox]")
+                    assert checkboxes.count() == 2
+                    assert not checkboxes.nth(0).is_checked()
+                    assert not checkboxes.nth(1).is_checked()
                     assert "agreed all order details" in form.inner_text()
                     form.locator("input[type=text]").first.fill("3-4PM")
                     assert not form.evaluate("(form) => form.checkValidity()"), "unchecked agreement should block approval"
                     page.on("dialog", lambda dialog: dialog.accept())
                     page.get_by_role("button", name="Approve & create order").click()
-                    assert not checkbox.is_checked()
-                    checkbox.check()
-                    assert form.evaluate("(form) => form.checkValidity()"), "confirmed agreement should allow approval"
+                    assert not checkboxes.nth(0).is_checked()
+                    checkboxes.nth(0).check()
+                    assert not form.evaluate("(form) => form.checkValidity()"), "customer contact confirmation required"
+                    checkboxes.nth(1).check()
+                    assert form.evaluate("(form) => form.checkValidity()"), "confirmed agreement and contact should allow approval"
                     with page.expect_request(lambda req: req.url.endswith("/functions/v1/manage-enquiries") and
                                              json.loads(req.post_data or "{}").get("action") == "confirm") as approved_request:
                         page.get_by_role("button", name="Approve & create order").click()
                     assert json.loads(approved_request.value.post_data)["detailsConfirmed"] is True
+                    assert json.loads(approved_request.value.post_data)["customerContacted"] is True
                     page.locator(".admin-decision-form").wait_for(state="hidden")
                     page.locator(".admin-state-pending").wait_for(state="visible")
                     page.locator(".admin-record-summary").click()
-                    assert not page.locator(".admin-decision-form input[type=checkbox]").is_checked()
+                    assert not page.locator(".admin-decision-form input[type=checkbox]").nth(0).is_checked()
+                    page.locator(".admin-decision-form input[type=text]").last.fill("Unfortunately we cannot fulfil this date.")
                     with page.expect_request(lambda req: req.url.endswith("/functions/v1/manage-enquiries") and
                                              json.loads(req.post_data or "{}").get("action") == "decline") as declined_request:
                         page.get_by_role("button", name="Decline enquiry").click()
                     assert json.loads(declined_request.value.post_data)["detailsConfirmed"] is False
+                    assert "cannot fulfil" in json.loads(declined_request.value.post_data)["notes"]
                     assert not errors, (engine, errors)
                     page.close()
                     print(f"PASS {engine}: admin order email uses proper line breaks")
