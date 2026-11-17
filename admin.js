@@ -704,6 +704,9 @@
       records=data.enquiries || [];
       administrator=data.administrator||'Administrator';
       adminRole=data.adminRole||'operator';
+      // A configured secret is necessary but not proof of inbox delivery.
+      const emailHealth=document.querySelector('#admin-email-health');
+      emailHealth.hidden=data.emailSecretConfigured!==false;
       matchingTotal=Number(data.total||0);
       pageCounts=data.counts||{pending:0,confirmed:0,declined:0};
       ownerPanel.hidden=adminRole!=='owner';

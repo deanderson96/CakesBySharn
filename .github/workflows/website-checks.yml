@@ -43,6 +43,8 @@ jobs:
         run: python tests/test_customer_email_notifications.py
       - name: Validate acknowledgment retry and email audit permissions
         run: python tests/test_acknowledgment_retry.py
+      - name: Validate production readiness source contracts
+        run: python tests/production_readiness.py
       - name: Run responsive browser checks
         run: python tests/smoke.py
       - name: Check admin email draft formatting
@@ -58,6 +60,8 @@ jobs:
           python-version: '3.12'
       - name: Reject malformed API requests without writing customer records
         run: python tests/hosted_negative.py
+      - name: Verify deployed website and admin entry points
+        run: python tests/live_pages.py
 
   live-enquiry-check:
     if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[live-enquiry-test]') }}
