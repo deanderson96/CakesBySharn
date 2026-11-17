@@ -1,5 +1,6 @@
 """Check real browser-generated admin order-confirmation drafts without sending email."""
 import json
+import os
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -70,8 +71,10 @@ def test():
     url = f"http://127.0.0.1:{server.server_port}/admin.html"
     try:
         with sync_playwright() as playwright:
-            for engine in ("chromium", "webkit"):
-                browser = getattr(playwright, engine).launch()
+            for engine in os.environ.get("CAKES_TEST_BROWSERS", "chromium,webkit").split(","):
+                browser = getattr(playwright, engine).launch(**(
+                    {"channel": "chrome"} if engine == "chromium" and os.environ.get("CAKES_USE_SYSTEM_CHROME") == "1" else {}
+                ))
                 try:
                     page = browser.new_page()
                     page.route("https://esm.sh/**", lambda route: route.fulfill(

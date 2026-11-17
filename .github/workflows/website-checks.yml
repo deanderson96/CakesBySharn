@@ -3,18 +3,34 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      cross_browser:
+        description: 'Run slower Chromium + WebKit compatibility suite'
+        type: boolean
+        required: false
+        default: false
 jobs:
   browser-checks:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CAKES_TEST_BROWSERS: ${{ inputs.cross_browser == true && 'chromium,webkit' || 'chromium' }}
+      CAKES_USE_SYSTEM_CHROME: ${{ inputs.cross_browser == true && '0' || '1' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install browsers
-        run: |
-          python -m pip install playwright==1.57.0
-          python -m playwright install --with-deps chromium webkit
+      # GitHub-hosted ubuntu-24.04 already includes Google Chrome and its OS
+      # libraries. Normal PR/push checks use that browser directly, avoiding
+      # expensive apt downloads (previously 181 packages) on every run.
+      - name: Install Playwright Python package
+        run: python -m pip install playwright==1.57.0
+      - name: Install additional browsers for manual cross-browser checks
+        if: ${{ inputs.cross_browser == true }}
+        timeout-minutes: 10
+        run: python -m playwright install --with-deps chromium webkit
       - name: Validate JavaScript syntax and catalogue parity
         run: |
           node --check catalog.js

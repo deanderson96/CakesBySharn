@@ -3,6 +3,7 @@
 Run: pip install playwright && python -m playwright install chromium webkit
      python tests/smoke.py
 """
+import os
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -19,8 +20,10 @@ def run():
     url = f"http://127.0.0.1:{server.server_port}/"
     try:
         with sync_playwright() as p:
-            for engine in ("chromium", "webkit"):
-                browser = getattr(p, engine).launch()
+            for engine in os.environ.get("CAKES_TEST_BROWSERS", "chromium,webkit").split(","):
+                browser = getattr(p, engine).launch(**(
+                    {"channel": "chrome"} if engine == "chromium" and os.environ.get("CAKES_USE_SYSTEM_CHROME") == "1" else {}
+                ))
                 try:
                     for width, height in ((320, 700), (390, 844), (430, 932), (1280, 900)):
                         page = browser.new_page(viewport={"width": width, "height": height})
