@@ -21,7 +21,7 @@ const catalog: Record<string, { name: string; price: number | null; type: string
   'cupcakes:3': { name: 'Personalised cupcakes', price: null, type: 'quote' },
   'celebration-cakes:0': { name: '7-inch buttercream cake (Three layers)', price: 4500, type: 'from' }
 };
-const handleRequest = async request => {
+const handleRequest = async (request: Request): Promise<Response> => {
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (request.method !== 'POST') return respond({ error: 'Method not allowed' }, 405);
   try {
