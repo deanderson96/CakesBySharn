@@ -537,6 +537,23 @@
       decline.addEventListener('click', () => decide('decline'));
       actionBox.append(form); panel.append(actionBox);
     }
+    // Safe recovery of acknowledgment emails for existing enquiries: the API
+    // rejects attempts when the acknowledgment was already sent or queued.
+    const retryAcknowledgment = el('button','button button-outline','Send missing acknowledgment email');
+    retryAcknowledgment.type='button';
+    retryAcknowledgment.addEventListener('click', async () => {
+      if (!window.confirm('Send the acknowledgment email for enquiry ' + enquiry.reference +
+        '? This option only works if the email was not previously sent.')) return;
+      retryAcknowledgment.disabled=true;
+      try {
+        const result = await api({action:'retry-acknowledgment-email',id:enquiry.id});
+        window.alert(result.notification?.sent
+          ? 'Acknowledgment email accepted by the email provider.'
+          : 'Acknowledgment email was not sent. Check the Supabase email delivery logs.');
+      } catch(error) { window.alert(error.message); }
+      finally { retryAcknowledgment.disabled=false; }
+    });
+    panel.append(retryAcknowledgment);
     if (enquiry.status === 'confirmed' || enquiry.status === 'declined') {
       const retry = el('button','button button-outline','Retry failed decision email');
       retry.type='button';
