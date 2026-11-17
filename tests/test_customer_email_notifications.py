@@ -7,7 +7,7 @@ manage = (root / "supabase/functions/manage-enquiries/index.ts").read_text()
 admin = (root / "admin.js").read_text()
 templates = (root / "supabase/functions/_shared/customer-email.ts").read_text()
 delivery = (root / "supabase/functions/_shared/deliver-notification.ts").read_text()
-migration = (root / "supabase/migrations/20261117233000_customer_email_notifications.sql").read_text()
+migration = (root / "supabase/migrations/20261117222822_customer_email_notifications.sql").read_text()
 
 assert "acknowledgmentEmailSent: acknowledged" in submit
 assert "deliverNotification(database, data.id" in submit
