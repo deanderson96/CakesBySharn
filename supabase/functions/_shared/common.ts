@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 export const cors = {
-  'Access-Control-Allow-Origin': Deno.env.get('SITE_ORIGIN') || 'https://deanderson96.github.io',
+  'Access-Control-Allow-Origin': 'https://www.cakesbysharn.co.uk',
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json',
@@ -18,4 +18,27 @@ export async function sendEmail(to: string, subject: string, message: string) {
     body: JSON.stringify({ from, to: [to], subject, text: message })
   });
   if (!response.ok) throw new Error('Email delivery failed: ' + response.status);
+}
+
+// Match CORS to the requesting production origin, rather than the obsolete
+// GitHub Pages hostname. Never reflect arbitrary origins or use credentials.
+const allowedSiteOrigins = new Set([
+  'https://www.cakesbysharn.co.uk',
+  'https://cakesbysharn.co.uk',
+  'https://deanderson96.github.io'
+]);
+export function withSiteCors(request: Request, response: Response): Response {
+  const headers = new Headers(response.headers);
+  const origin = request.headers.get('Origin');
+  if (origin && allowedSiteOrigins.has(origin)) {
+    headers.set('Access-Control-Allow-Origin', origin);
+  } else {
+    headers.delete('Access-Control-Allow-Origin');
+  }
+  headers.set('Vary', 'Origin');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
 }

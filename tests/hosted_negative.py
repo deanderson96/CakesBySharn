@@ -54,3 +54,40 @@ reject('malformed item structure', json.dumps(base_payload).encode())
 status, body = post('manage-enquiries', b'{"action":"list"}', {'Authorization': 'Bearer invalid'})
 assert status in (401, 403), f'Unverified admin JWT accepted or unexpected error: {status} {body[:250]!r}'
 print(f'PASS rejected unverified admin JWT: {status}', flush=True)
+
+# CORS must match the public custom domain, even on error responses.
+# Browser preflight failures appear as "Failed to fetch" and prevent any POST.
+for site_origin in ('https://www.cakesbysharn.co.uk', 'https://cakesbysharn.co.uk'):
+    for endpoint in ('submit-enquiry', 'manage-enquiries'):
+        request = Request(base + '/functions/v1/' + endpoint, method='OPTIONS', headers={
+            'Origin': site_origin,
+            'Access-Control-Request-Method': 'POST',
+            'Access-Control-Request-Headers': 'apikey,content-type',
+        })
+        with urlopen(request, timeout=30) as response:
+            assert response.status in (200, 204), (endpoint, site_origin, response.status)
+            assert response.headers.get('Access-Control-Allow-Origin') == site_origin, (
+                endpoint, site_origin, response.headers.get('Access-Control-Allow-Origin'))
+            assert 'POST' in response.headers.get('Access-Control-Allow-Methods', '')
+            assert 'apikey' in response.headers.get('Access-Control-Allow-Headers', '').lower()
+        print(f'PASS {endpoint} preflight allows {site_origin}', flush=True)
+    request = Request(base + '/functions/v1/submit-enquiry', data=b'{broken', method='POST', headers={
+        'Origin': site_origin, 'apikey': key, 'Content-Type': 'application/json',
+    })
+    try:
+        urlopen(request, timeout=30)
+        raise AssertionError('Invalid JSON unexpectedly accepted')
+    except HTTPError as exc:
+        assert exc.code == 400
+        assert exc.headers.get('Access-Control-Allow-Origin') == site_origin, (
+            site_origin, exc.headers.get('Access-Control-Allow-Origin'))
+    print(f'PASS error response allows {site_origin}', flush=True)
+
+request = Request(base + '/functions/v1/submit-enquiry', method='OPTIONS', headers={
+    'Origin': 'https://untrusted.example', 'Access-Control-Request-Method': 'POST'
+})
+with urlopen(request, timeout=30) as response:
+    assert response.headers.get('Access-Control-Allow-Origin') is None, (
+        'Untrusted origin incorrectly allowed', response.headers.get('Access-Control-Allow-Origin'))
+print('PASS unrelated origin rejected by CORS', flush=True)
+

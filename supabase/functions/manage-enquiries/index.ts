@@ -1,8 +1,8 @@
-import { cors, respond } from '../_shared/common.ts';
+import { cors, respond, withSiteCors } from '../_shared/common.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { deliverNotification } from '../_shared/deliver-notification.ts';
 
-Deno.serve(async (request) => {
+const handleRequest = async (request) => {
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (request.method !== 'POST') return respond({ error: 'Method not allowed' }, 405);
   try {
@@ -180,4 +180,5 @@ Deno.serve(async (request) => {
     console.error('manage-enquiries error', error);
     return respond({ error: 'Unable to process your request. Please try again or contact the site owner.' }, 500);
   }
-});
+};
+Deno.serve(async request => withSiteCors(request, await handleRequest(request)));
