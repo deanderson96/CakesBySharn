@@ -1,12 +1,11 @@
-create or replace function public.admin_decide_enquiry(
-  p_id uuid, p_action text, p_date date, p_time text,
-  p_total_pence integer, p_notes text, p_details_confirmed boolean
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $function$
+-- Require explicit customer-agreement attestation for approved orders.
+-- Legacy six-argument function is revoked after the Edge Function rollout.
+CREATE OR REPLACE FUNCTION public.admin_decide_enquiry(p_id uuid, p_action text, p_date date, p_time text, p_total_pence integer, p_notes text, p_details_confirmed boolean)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 declare e public.enquiries%rowtype; o public.orders%rowtype;
 begin
   perform public.assert_admin_mfa();
@@ -42,7 +41,8 @@ begin
     insert into audit.admin_events(actor_id,action,enquiry_id) values(auth.uid(),'enquiry_declined',e.id);
     return jsonb_build_object('status','declined','customerNotified',false);
   end if;
-end $function$;
+end $function$
+
 
 revoke all on function public.admin_decide_enquiry(uuid,text,date,text,integer,text,boolean) from public, anon, authenticated;
 grant execute on function public.admin_decide_enquiry(uuid,text,date,text,integer,text,boolean) to authenticated;
