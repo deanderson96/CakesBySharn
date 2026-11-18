@@ -13,5 +13,5 @@ assert "window.addEventListener('focus'" in js
 assert "event.isTrusted" in js
 assert "if(!dashboard.hidden)await refresh();" in js
 assert "Signed out automatically after 30 minutes of inactivity" in js
-assert "admin.js?v=20261118idle30m1" in html
+assert "admin.js?v=20261118enterprise1" in html
 print("PASS admin 30-minute inactivity timeout, persistent timestamp and automatic sign-out")
