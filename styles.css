@@ -858,3 +858,21 @@ html { scroll-behavior:smooth; }
 .enquiry-result__reference{display:block;align-self:flex-start;padding:10px 16px;border:1px solid #acd9c8;border-radius:8px;background:#fff;color:#163c38;font-size:clamp(17px,2.8vw,23px);letter-spacing:.035em;user-select:all}
 .enquiry-result__notice{padding-top:12px;margin-top:6px;border-top:1px solid #c9e8db;font-weight:700;color:#31574f}
 @media(max-width:560px){.enquiry-result--success{padding:20px 17px}.enquiry-result__reference{max-width:100%;box-sizing:border-box;overflow-wrap:anywhere}}
+
+/* Admin enquiry/order detail modal */
+.admin-page .admin-record-summary[aria-haspopup="dialog"]{cursor:pointer}
+.admin-page .admin-record-summary[aria-haspopup="dialog"]:hover{background:#f1f8f8}
+.admin-record-dialog{box-sizing:border-box;position:fixed;inset:0;margin:auto;width:min(940px,calc(100vw - 32px));max-width:940px;max-height:min(90dvh,960px);padding:0;border:1px solid #cddde1;border-radius:16px;background:#fff;color:#1b3039;box-shadow:0 28px 90px rgba(8,31,40,.28);overflow:hidden}
+.admin-record-dialog[open]{display:flex;flex-direction:column}
+.admin-record-dialog::backdrop{background:rgba(12,32,41,.62);backdrop-filter:blur(3px)}
+.admin-dialog-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex:none;padding:24px 28px 20px;border-bottom:1px solid #dce8ea;background:#f8fbfc}
+.admin-dialog-header .eyebrow{margin:0 0 8px;font:700 11px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:#4c7880}
+.admin-dialog-header h2{font:700 clamp(19px,2.7vw,27px)/1.25 var(--sans);letter-spacing:-.025em;color:#173840;margin:0;overflow-wrap:anywhere}
+.admin-dialog-close{display:inline-flex;align-items:center;gap:9px;flex:none;border:1px solid #c6d8dd;background:#fff;color:#264c56;border-radius:8px;padding:10px 14px;font:700 13px var(--sans);cursor:pointer}
+.admin-dialog-close:hover{background:#eaf5f5}
+.admin-dialog-close:focus-visible{outline:3px solid #5bbdbb;outline-offset:3px}
+.admin-dialog-content{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.admin-dialog-content .admin-record-panel{display:block;padding:24px 28px 32px;border-top:0;background:#fff;animation:none}
+.admin-dialog-content .admin-detail-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:650px){.admin-record-dialog{width:calc(100vw - 16px);max-height:calc(100dvh - 16px);border-radius:12px}.admin-dialog-header{padding:17px}.admin-dialog-content .admin-record-panel{padding:18px 16px 24px}.admin-dialog-content .admin-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-dialog-close{padding:9px 11px}}
+@media(max-width:420px){.admin-dialog-content .admin-detail-grid{grid-template-columns:1fr}}
