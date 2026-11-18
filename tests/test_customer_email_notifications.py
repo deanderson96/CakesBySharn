@@ -18,7 +18,7 @@ assert "retry-decision-email" in manage and "retry-decision-email" in admin
 assert "customerContacted.type = 'checkbox'" in admin
 assert "Reason for declining" in admin
 assert "escapeHtml(info.reason" in templates
-assert "no-reply@cakesbysharn.co.uk" in templates
+assert "hello@cakesbysharn.co.uk" in templates
 assert "RESEND_API_KEY" in templates
 assert "Idempotency-Key" in templates
 assert "reply_to" in templates
