@@ -19,12 +19,14 @@ assert "new TextEncoder().encode(raw).byteLength > 16000" in submit, 'Check actu
 assert "todayInLondon" in submit, 'Require UK business date'
 assert "input.items.some(" in submit, 'Reject malformed items with 400'
 manage = (ROOT / 'supabase/functions/manage-enquiries/index.ts').read_text()
-assert 'getAuthenticatorAssuranceLevel(jwt)' in manage
-assert "currentLevel !== 'aal2'" in manage
+assert 'getAuthenticatorAssuranceLevel(jwt)' not in manage
+assert "user.email_confirmed_at" in manage
+assert ".from('admin_accounts')" in manage
+assert "requireOwner();" in manage
 assert ".from('admin_accounts')" in manage
 assert "p_details_confirmed" in manage
 legacy_revoke = next((x for x in migrations if 'revoke_legacy_unattested_order_decision' in x.name), None)
 assert legacy_revoke and 'revoke' in legacy_revoke.read_text().lower()
 assert (ROOT / 'catalog.js').exists()
 assert 'catalog.js' in (ROOT / 'index.html').read_text()
-print(f'PASS: {len(migrations)} migrations, admin MFA, backend validation and catalogue linkage')
+print(f'PASS: {len(migrations)} migrations, admin password authentication and owner RBAC, backend validation and catalogue linkage')
