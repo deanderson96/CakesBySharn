@@ -49,6 +49,8 @@ jobs:
         run: python tests/test_owner_deletion_contracts.py
       - name: Check Dean-only delete and restore UI with mocked records
         run: python tests/owner_bulk_delete_ui.py
+      - name: Validate password-only admin security contracts
+        run: python tests/test_password_only_admin_contracts.py
       - name: Verify admin password login without an authenticator
         run: python tests/admin_password_only.py
       - name: Run responsive browser checks
