@@ -896,79 +896,29 @@
     if(pageOffset+pageSize<matchingTotal){pageOffset+=pageSize;refresh();}
   });
 
-  const mfaSection=document.querySelector('#admin-mfa');
-  const mfaSetup=document.querySelector('#admin-mfa-enrol');
-  const mfaInstructions=document.querySelector('#admin-mfa-instructions');
-  const mfaCode=document.querySelector('#admin-mfa-code');
-  let mfaFactorId=null;
   async function proceedAfterSignIn(){
-    const {data:{session}}=await client.auth.getSession();
-    if(!session){
-      login.hidden=false;dashboard.hidden=true;mfaSection.hidden=true;sessionActions.hidden=true;
-      return;
-    }
-    try{
-      const {data:level,error:levelError}=await client.auth.mfa.getAuthenticatorAssuranceLevel();
-      if(levelError)throw levelError;
-      login.hidden=true;
-      if(level.currentLevel==='aal2'){
-        mfaSection.hidden=true;dashboard.hidden=false;sessionActions.hidden=false;
-        await refresh();
+    try {
+      const {data:{session},error:sessionError}=await client.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session) {
+        login.hidden=false;dashboard.hidden=true;sessionActions.hidden=true;
         return;
       }
-      dashboard.hidden=true;sessionActions.hidden=true;mfaSection.hidden=false;
-      const {data:factors,error:factorError}=await client.auth.mfa.listFactors();
-      if(factorError)throw factorError;
-      const enrolled=(factors.totp||[]).find(f=>f.status==='verified')||(factors.totp||[])[0];
-      if(enrolled){
-        mfaFactorId=enrolled.id;
-        mfaSetup.hidden=true;
-        mfaInstructions.textContent='Enter the six-digit code from your authenticator app to access the private dashboard.';
-      }else{
-        const {data:factor,error:enrolError}=await client.auth.mfa.enroll({
-          factorType:'totp',friendlyName:'Cakes by Sharn admin'
-        });
-        if(enrolError)throw enrolError;
-        mfaFactorId=factor.id;
-        mfaSetup.hidden=false;
-        mfaInstructions.textContent='First sign-in: set up mandatory two-factor authentication with an authenticator app.';
-        document.querySelector('#admin-mfa-secret').textContent=factor.totp?.secret||'';
-        const qr=document.querySelector('#admin-mfa-qr');
-        const svg=String(factor.totp?.qr_code||'');
-        qr.hidden=!svg;
-        if(svg)qr.src=svg.startsWith('data:')?svg:svg.trim().startsWith('<svg')?
-          'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg):
-          'data:image/svg+xml;base64,'+svg;
-      }
-      mfaCode.focus();
-      status.textContent='Two-factor verification is required before accessing customer records.';
-    }catch(error){
-      dashboard.hidden=true;mfaSection.hidden=false;
-      status.textContent='MFA setup or verification unavailable: '+error.message;
+      // Verify the signed-in account is an active, email-confirmed administrator
+      // before displaying any private dashboard. The API and SQL recheck this
+      // for every operation; the owner role still gates destructive actions.
+      await api({action:'list',offset:0,limit:1,status:'all',search:''});
+      login.hidden=true;dashboard.hidden=false;sessionActions.hidden=false;
+      await refresh();
+    } catch(error) {
+      dashboard.hidden=true;sessionActions.hidden=true;login.hidden=false;
+      status.textContent='Administrator access unavailable: '+error.message;
     }
   }
-  document.querySelector('#admin-mfa-form').addEventListener('submit',async event=>{
-    event.preventDefault();
-    if(!mfaFactorId){status.textContent='Authenticator setup missing. Sign out and sign back in.';return;}
-    const code=mfaCode.value.trim();
-    if(!/^\d{6}$/.test(code)){status.textContent='Enter a six-digit authenticator code.';return;}
-    const verifyButton=document.querySelector('#admin-mfa-verify');
-    verifyButton.disabled=true;
-    try{
-      const {data:challenge,error:challengeError}=await client.auth.mfa.challenge({factorId:mfaFactorId});
-      if(challengeError)throw challengeError;
-      const {error:verifyError}=await client.auth.mfa.verify({factorId:mfaFactorId,challengeId:challenge.id,code});
-      if(verifyError)throw verifyError;
-      mfaCode.value='';
-      await proceedAfterSignIn();
-    }catch(error){status.textContent='Authenticator verification failed: '+error.message;}
-    finally{verifyButton.disabled=false;}
-  });
   async function signOut(){
     await client.auth.signOut();
-    dashboard.hidden=true;mfaSection.hidden=true;sessionActions.hidden=true;login.hidden=false;
+    dashboard.hidden=true;sessionActions.hidden=true;login.hidden=false;
     orders.replaceChildren();selectedForDeletion.clear();deleteTools.hidden=true;deletedPanel.hidden=true;
-    mfaFactorId=null;
     status.textContent='Signed out.';
   }
   document.querySelector('#login-form').addEventListener('submit',async event=>{
@@ -983,6 +933,5 @@
   });
   document.querySelector('#admin-refresh').addEventListener('click',refresh);
   document.querySelector('#admin-signout').addEventListener('click',signOut);
-  document.querySelector('#admin-mfa-signout').addEventListener('click',signOut);
   await proceedAfterSignIn();
 })();
