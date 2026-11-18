@@ -227,7 +227,7 @@ def test():
                     page.locator("#admin-refresh").click()
                     page.locator(".admin-state-pending").wait_for(state="visible")
                     page.locator(".admin-record-summary").click()
-                    form = page.locator(".admin-decision-form")
+                    form = page.locator("#admin-record-dialog .admin-decision-form")
                     checkboxes = form.locator("input[type=checkbox]")
                     assert checkboxes.count() == 2
                     assert not checkboxes.nth(0).is_checked()
@@ -247,11 +247,11 @@ def test():
                         page.get_by_role("button", name="Approve & create order").click()
                     assert json.loads(approved_request.value.post_data)["detailsConfirmed"] is True
                     assert json.loads(approved_request.value.post_data)["customerContacted"] is True
-                    page.locator(".admin-decision-form").wait_for(state="hidden")
+                    page.locator("#admin-record-dialog").wait_for(state="hidden")
                     page.locator(".admin-state-pending").wait_for(state="visible")
                     page.locator(".admin-record-summary").click()
-                    assert not page.locator(".admin-decision-form input[type=checkbox]").nth(0).is_checked()
-                    page.locator(".admin-decision-form input[type=text]").last.fill("Unfortunately we cannot fulfil this date.")
+                    assert not page.locator("#admin-record-dialog .admin-decision-form input[type=checkbox]").nth(0).is_checked()
+                    page.locator("#admin-record-dialog .admin-decision-form input[type=text]").last.fill("Unfortunately we cannot fulfil this date.")
                     with page.expect_request(lambda req: req.url.endswith("/functions/v1/manage-enquiries") and
                                              json.loads(req.post_data or "{}").get("action") == "decline") as declined_request:
                         page.get_by_role("button", name="Decline enquiry").click()
