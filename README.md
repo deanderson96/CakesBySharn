@@ -6,7 +6,7 @@ A responsive bakery website and private order-management system, hosted on GitHu
 
 - **Public site:** `index.html`, `app.js`, `catalog.js`, `styles.css`. Customers browse the menu, build a basket and submit an **enquiry** (not a confirmed order).
 - **Admin portal:** `admin.html`, `admin.js`. Authorized staff review enquiries, agree orders with customers, record replies, payments and expenses, and view reports.
-- **Backend:** `submit-enquiry` is public and validates submissions, checks rate limits and stores enquiries using server credentials. `manage-enquiries` requires a verified Supabase user, AAL2 MFA, and active admin membership.
+- **Backend:** `submit-enquiry` is public and validates submissions, checks rate limits and stores enquiries using server credentials. `manage-enquiries` requires a confirmed-email Supabase password session and active admin membership (no mandatory 2FA).
 - **Database:** `public` contains enquiries, orders, administrator membership and maintenance records. `accounting` contains payments, expenses and archive entries. `audit` contains administrator activity.
 - **Financial records:** This is a bookkeeping aid, not a payment processor or tax filing system. Customer communication and payments are handled outside the website.
 
@@ -28,7 +28,7 @@ Open `http://localhost:8000/`. Supabase connectivity requires the configured pro
 - **Database schema:** **`supabase/migrations/`**, recovered verbatim from the linked Supabase project's 20 existing migrations. The root `supabase/schema.sql` is a **legacy snapshot**, not an upgrade script.
 - **Edge functions:** `supabase/functions/`, with common helpers in `_shared/`.
 - **Config:** `order-config.js` is public and must contain no secrets.
-- **Supabase auth / user roles:** The database validates the signed-in admin identity and MFA; owner-only actions require the `owner` role.
+- **Supabase auth / user roles:** The database validates the signed-in admin identity, confirmed email and active membership; owner-only actions require the `owner` role. The former MFA gate was removed at the owner's request; use strong unique passwords.
 
 ## Checks
 
@@ -50,12 +50,12 @@ GitHub Actions runs the static checks and browser tests on pushes and pull reque
 
 1. Create a branch and open a pull request. Review source changes and CI results.
 2. When changing the database, author a new versioned SQL migration. Never reapply `supabase/schema.sql` or edit historic applied migrations.
-3. Review database privileges, RLS, owner/operator permissions and AAL2 enforcement for any RPC change.
+3. Review database privileges, RLS, confirmed-email checks and owner/operator permissions for any RPC change.
 4. Deploy updated Edge Functions intentionally; note that deployment is **not** automatic from GitHub Pages.
 5. Merge tested frontend changes to `main` only after the backend version is compatible, then verify the hosted website.
 6. Run the negative-auth, rate-limit and order-approval scenarios before production rollout; see [architecture and controls](docs/architecture.md) and [release checklist](docs/release-checklist.md).
 
-The published site is normally at https://deanderson96.github.io/CakesBySharn/.
+The published site is https://www.cakesbysharn.co.uk/ (admin: https://www.cakesbysharn.co.uk/admin.html).
 
 ## Operational safeguards
 
