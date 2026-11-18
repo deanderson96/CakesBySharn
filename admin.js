@@ -918,7 +918,7 @@
   }
   async function signOut(){
     await client.auth.signOut();
-    dashboard.hidden=true;sessionActions.hidden=true;login.hidden=false;
+    dashboard.hidden=true;sessionActions.hidden=true;login.hidden=false;magicLink.hidden=false;
     orders.replaceChildren();selectedForDeletion.clear();deleteTools.hidden=true;deletedPanel.hidden=true;
     status.textContent='Signed out.';
   }
