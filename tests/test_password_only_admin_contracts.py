@@ -1,7 +1,7 @@
 """Guardrails for password-only admin access and preserved owner authorisation."""
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
-migration=(root/"supabase/migrations/20261118223000_password_only_admin_access.sql").read_text()
+migration=(root/"supabase/migrations/20261118220903_password_only_admin_access.sql").read_text()
 backend=(root/"supabase/functions/manage-enquiries/index.ts").read_text()
 admin=(root/"admin.js").read_text()
 html=(root/"admin.html").read_text()
