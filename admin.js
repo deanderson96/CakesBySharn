@@ -717,7 +717,7 @@
     });
     panel.append(retryAcknowledgment);
     if (enquiry.status === 'confirmed' || enquiry.status === 'declined') {
-      const retry = el('button','button button-outline','Retry failed decision email');
+      const retry = el('button','button button-outline','Send missing / retry decision email');
       retry.type='button';
       retry.addEventListener('click', async () => {
         retry.disabled=true;
