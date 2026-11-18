@@ -20,7 +20,8 @@
 - [ ] Keep `submit-enquiry` public and `manage-enquiries` JWT-protected
 - [ ] Verify public submission size/date/catalogue rejection paths in staging
 - [ ] Deploy static website from reviewed `main`
-- [ ] Smoke-test mobile browser, password-only admin login, owner-only deletion, order approval and reporting
+- [ ] Smoke-test Dean and Sharn email/password login, one-time email magic-link login and signout, owner-only deletion, order approval and reporting
+- [ ] Under Supabase Authentication → URL Configuration, allow `https://www.cakesbysharn.co.uk/admin.html` as a redirect URL; confirm Magic Link email template and SMTP deliverability
 - [ ] Confirm actual acknowledgement behaviour; do not imply automated email if unavailable
 
 ## Follow-up
