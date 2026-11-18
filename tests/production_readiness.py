@@ -17,7 +17,10 @@ assert 'id="admin-email-health"' in admin
 assert "emailHealth.hidden=data.emailSecretConfigured!==false" in admin_js
 assert "emailSecretConfigured: Boolean(Deno.env.get('RESEND_API_KEY')?.trim())" in manage
 assert "user.email_confirmed_at" in manage
-assert "currentLevel !== 'aal2'" in manage
+assert "currentLevel !== 'aal2'" not in manage
+assert "getAuthenticatorAssuranceLevel" not in manage
+assert 'id="admin-mfa"' not in admin
+assert "signInWithPassword" in admin_js
 assert "administrator" in manage and "active" in manage
 assert 'Cakes by Sharn is responsible' in policy
 assert "cakesbysharnx@hotmail.com" in policy
@@ -26,4 +29,4 @@ assert "Information Commissioner's Office" in policy
 assert 'https://www.cakesbysharn.co.uk/privacy.html' in policy
 assert "Deno.env.get('RESEND_API_KEY')" in email
 assert "idempotencyKey" in email
-print("PASS: published metadata, privacy, MFA admin access and email readiness warning contracts")
+print("PASS: published metadata, privacy, verified-admin password access and email readiness warning contracts")
