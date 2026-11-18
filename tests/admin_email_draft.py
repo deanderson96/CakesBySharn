@@ -188,7 +188,8 @@ def test():
                     assert page.locator(".admin-chart-month").count() == 6
                     assert page.locator("#admin-period").count() == 0
                     with page.expect_download() as download_info:
-                        page.locator("#admin-export-accounting").click()
+                        page.locator("#admin-record-dialog-close").click()
+                    page.locator("#admin-export-accounting").click()
                     download = download_info.value
                     assert download.suggested_filename.startswith("cakes-by-sharn-accounting-")
                     with open(download.path(), "r", encoding="utf-8-sig") as exported:
