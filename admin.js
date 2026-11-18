@@ -349,6 +349,39 @@
     });
     return {total,from,unpriced};
   }
+  const recordDialog=document.querySelector('#admin-record-dialog');
+  const recordDialogContent=document.querySelector('#admin-record-dialog-content');
+  const recordDialogTitle=document.querySelector('#admin-record-dialog-title');
+  const closeRecordDialog=document.querySelector('#admin-record-dialog-close');
+  let currentRecordPanel=null;
+  let currentRecordOwner=null;
+  let lastRecordTrigger=null;
+  function closeRecord(){
+    if(recordDialog.open)recordDialog.close();
+  }
+  function openRecord(enquiry,details,panel,trigger){
+    if(recordDialog.open)closeRecord();
+    lastRecordTrigger=trigger;
+    currentRecordPanel=panel;
+    currentRecordOwner=details;
+    recordDialogTitle.textContent=enquiry.customer_name+' · '+enquiry.reference;
+    recordDialogContent.replaceChildren(panel);
+    recordDialog.showModal();
+    panel.dispatchEvent(new Event('admin-record-open'));
+    closeRecordDialog.focus();
+  }
+  closeRecordDialog.addEventListener('click',closeRecord);
+  recordDialog.addEventListener('click',event=>{
+    if(event.target===recordDialog)closeRecord();
+  });
+  recordDialog.addEventListener('close',()=>{
+    if(currentRecordOwner?.isConnected && currentRecordPanel)currentRecordOwner.append(currentRecordPanel);
+    else currentRecordPanel?.remove();
+    currentRecordPanel=null;currentRecordOwner=null;
+    recordDialogContent.replaceChildren();
+    if(lastRecordTrigger?.isConnected)lastRecordTrigger.focus();
+    lastRecordTrigger=null;
+  });
   function renderRecord(enquiry) {
     const order = orderMap.get(enquiry.id);
     const method = contactMethod(enquiry);
@@ -562,7 +595,7 @@
             ' (recorded entries only)';
         }catch(error){paymentSummary.textContent='Payment summary unavailable: '+error.message;}
       }
-      details.addEventListener('toggle',()=>{if(details.open)loadPaymentSummary();});
+      panel.addEventListener('admin-record-open',loadPaymentSummary);
       const paymentForm=el('form','admin-order-payment-form');
       const paymentTypeLabel=el('label','','Entry type');
       const paymentType=document.createElement('select');
@@ -709,9 +742,16 @@
       panel.append(destructive);
     }
     details.append(panel);
+    summary.setAttribute('aria-haspopup','dialog');
+    summary.setAttribute('aria-label','Open details for '+enquiry.customer_name+', '+enquiry.reference);
+    summary.addEventListener('click',event=>{
+      event.preventDefault();
+      openRecord(enquiry,details,panel,summary);
+    });
     return details;
   }
   function renderRecords(){
+    closeRecord();
     orders.replaceChildren();
     records.forEach(enquiry=>orders.append(renderRecord(enquiry)));
     updateDeleteSelection();

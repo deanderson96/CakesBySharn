@@ -187,6 +187,7 @@ def test():
                     assert "£42.50" in page.locator("#admin-analytics-cards").inner_text()
                     assert page.locator(".admin-chart-month").count() == 6
                     assert page.locator("#admin-period").count() == 0
+                    page.locator("#admin-record-dialog-close").click()
                     with page.expect_download() as download_info:
                         page.locator("#admin-export-accounting").click()
                     download = download_info.value
