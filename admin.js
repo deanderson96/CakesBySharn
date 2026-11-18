@@ -897,6 +897,66 @@
     if(pageOffset+pageSize<matchingTotal){pageOffset+=pageSize;refresh();}
   });
 
+  // Private workspace: expire after 30 minutes without human interaction.
+  // Store the timestamp so a page refresh does not reset the inactivity clock.
+  const IDLE_LIMIT_MS=30*60*1000;
+  const IDLE_KEY='cakes-admin-last-activity';
+  let idleTimer=null;
+  let idleSigningOut=false;
+  let lastActivityWrite=0;
+  function idleTimestamp(){
+    try { return Number(localStorage.getItem(IDLE_KEY)) || 0; }
+    catch { return lastActivityWrite; }
+  }
+  function saveActivity(now){
+    lastActivityWrite=now;
+    try { localStorage.setItem(IDLE_KEY,String(now)); } catch {}
+  }
+  function clearActivity(){
+    lastActivityWrite=0;
+    try { localStorage.removeItem(IDLE_KEY); } catch {}
+  }
+  function stopIdleTimer(){
+    if(idleTimer!==null)clearTimeout(idleTimer);
+    idleTimer=null;
+  }
+  function scheduleIdleCheck(){
+    stopIdleTimer();
+    if(dashboard.hidden || idleSigningOut)return;
+    const remaining=Math.max(0,IDLE_LIMIT_MS-(Date.now()-idleTimestamp()));
+    idleTimer=setTimeout(checkIdleTimeout,Math.min(remaining,60000));
+  }
+  async function checkIdleTimeout(){
+    if(dashboard.hidden || idleSigningOut)return;
+    if(Date.now()-idleTimestamp()>=IDLE_LIMIT_MS){
+      idleSigningOut=true;
+      try { await signOut(); }
+      finally {
+        idleSigningOut=false;
+        status.textContent='Signed out automatically after 30 minutes of inactivity. Please sign in again.';
+      }
+      return;
+    }
+    scheduleIdleCheck();
+  }
+  function recordActivity(event){
+    if(dashboard.hidden || idleSigningOut || !event.isTrusted)return;
+    const now=Date.now();
+    // Limit storage writes during mouse movement and keyboard input.
+    if(now-idleTimestamp()<15000)return;
+    saveActivity(now);
+    scheduleIdleCheck();
+  }
+  for(const eventName of ['pointerdown','keydown','touchstart','scroll']){
+    document.addEventListener(eventName,recordActivity,{passive:true});
+  }
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)void checkIdleTimeout();
+  });
+  window.addEventListener('focus',()=>{void checkIdleTimeout();});
+  window.addEventListener('storage',event=>{
+    if(event.key===IDLE_KEY && !dashboard.hidden)void checkIdleTimeout();
+  });
   async function proceedAfterSignIn(){
     try {
       const {data:{session},error:sessionError}=await client.auth.getSession();
@@ -910,13 +970,17 @@
       // for every operation; the owner role still gates destructive actions.
       await api({action:'list',offset:0,limit:1,status:'all',search:''});
       login.hidden=true;magicLink.hidden=true;dashboard.hidden=false;sessionActions.hidden=false;
-      await refresh();
+      if(!idleTimestamp())saveActivity(Date.now());
+      await checkIdleTimeout();
+      if(!dashboard.hidden)await refresh();
     } catch(error) {
       dashboard.hidden=true;sessionActions.hidden=true;login.hidden=false;magicLink.hidden=false;
       status.textContent='Administrator access unavailable: '+error.message;
     }
   }
   async function signOut(){
+    stopIdleTimer();
+    clearActivity();
     await client.auth.signOut();
     dashboard.hidden=true;sessionActions.hidden=true;login.hidden=false;magicLink.hidden=false;
     orders.replaceChildren();selectedForDeletion.clear();deleteTools.hidden=true;deletedPanel.hidden=true;
@@ -930,6 +994,7 @@
       password:document.querySelector('#admin-password').value
     });
     if(error){status.textContent=error.message;return;}
+    saveActivity(Date.now());
     await proceedAfterSignIn();
   });
   document.querySelector('#admin-magic-link-form').addEventListener('submit',async event=>{
