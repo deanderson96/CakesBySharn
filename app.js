@@ -339,7 +339,8 @@ document.querySelector('#submit-online-enquiry').addEventListener('click', async
   const button = document.querySelector('#submit-online-enquiry');
   const status = document.querySelector('#online-enquiry-result');
   button.disabled = true;
-  status.textContent = 'Sending enquiry…';
+  status.className = 'enquiry-result enquiry-result--pending';
+  status.textContent = 'Submitting your enquiry securely…';
   try {
     const response = await fetch(orderConfig.supabaseUrl + '/functions/v1/submit-enquiry', {
       method: 'POST',
@@ -352,12 +353,32 @@ document.querySelector('#submit-online-enquiry').addEventListener('click', async
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Unable to send enquiry.');
-    const acknowledgment = result.acknowledgmentEmailSent === true
-      ? 'You should receive an acknowledgment email shortly. Please check your junk or spam folder if it does not arrive.'
-      : 'We could not confirm that your acknowledgment email was sent. Please save your reference; our team will contact you using the details provided after reviewing your request.';
-    status.textContent = 'Enquiry received! Thank you for contacting Cakes by Sharn. Your reference: ' + result.reference + '. ' + acknowledgment + ' This is not yet a confirmed order. Our team will review availability, pricing and the next steps.';
+    const emailConfirmed = result.acknowledgmentEmailSent === true;
+    const heading = document.createElement('strong');
+    heading.className = 'enquiry-result__heading';
+    heading.textContent = '✓ Your enquiry has been received';
+    const description = document.createElement('span');
+    description.textContent = 'Thank you, ' + name + '. We have received your request and will review availability, pricing and the next steps.';
+    const referenceLabel = document.createElement('span');
+    referenceLabel.className = 'enquiry-result__reference-label';
+    referenceLabel.textContent = 'Your enquiry reference';
+    const reference = document.createElement('strong');
+    reference.className = 'enquiry-result__reference';
+    reference.textContent = result.reference;
+    const emailMessage = document.createElement('span');
+    emailMessage.textContent = emailConfirmed
+      ? 'An acknowledgment email has been sent to ' + email + '. Check your junk folder if you cannot find it.'
+      : 'Your enquiry was saved, but we could not confirm delivery of the acknowledgment email. Please keep your reference; we will contact you using the details provided.';
+    const disclaimer = document.createElement('span');
+    disclaimer.className = 'enquiry-result__notice';
+    disclaimer.textContent = 'This is an enquiry, not a confirmed order. We will confirm the details with you before approving it.';
+    status.className = 'enquiry-result enquiry-result--success';
+    status.replaceChildren(heading,description,referenceLabel,reference,emailMessage,disclaimer);
+    status.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});
+
   } catch (error) {
-    status.textContent = error.message + ' Please try again later.';
+    status.className = 'enquiry-result enquiry-result--error';
+    status.textContent = 'We could not submit your enquiry. ' + error.message + ' Please try again. No confirmation reference has been issued.';
     button.disabled = false;
   }
 });
