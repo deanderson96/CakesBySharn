@@ -5,6 +5,7 @@
   const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
   const client = createClient(config.supabaseUrl, config.supabaseAnonKey);
   const login = document.querySelector('#admin-login');
+  const magicLink = document.querySelector('#admin-magic-link');
   const dashboard = document.querySelector('#admin-dashboard');
   const orders = document.querySelector('#admin-orders');
   async function api(input) {
@@ -901,17 +902,17 @@
       const {data:{session},error:sessionError}=await client.auth.getSession();
       if (sessionError) throw sessionError;
       if (!session) {
-        login.hidden=false;dashboard.hidden=true;sessionActions.hidden=true;
+        login.hidden=false;magicLink.hidden=false;dashboard.hidden=true;sessionActions.hidden=true;
         return;
       }
       // Verify the signed-in account is an active, email-confirmed administrator
       // before displaying any private dashboard. The API and SQL recheck this
       // for every operation; the owner role still gates destructive actions.
       await api({action:'list',offset:0,limit:1,status:'all',search:''});
-      login.hidden=true;dashboard.hidden=false;sessionActions.hidden=false;
+      login.hidden=true;magicLink.hidden=true;dashboard.hidden=false;sessionActions.hidden=false;
       await refresh();
     } catch(error) {
-      dashboard.hidden=true;sessionActions.hidden=true;login.hidden=false;
+      dashboard.hidden=true;sessionActions.hidden=true;login.hidden=false;magicLink.hidden=false;
       status.textContent='Administrator access unavailable: '+error.message;
     }
   }
@@ -930,6 +931,26 @@
     });
     if(error){status.textContent=error.message;return;}
     await proceedAfterSignIn();
+  });
+  document.querySelector('#admin-magic-link-form').addEventListener('submit',async event=>{
+    event.preventDefault();
+    const email=document.querySelector('#admin-magic-email').value.trim();
+    const button=event.currentTarget.querySelector('button[type="submit"]');
+    button.disabled=true;
+    status.textContent='Requesting sign-in link…';
+    try {
+      const {error}=await client.auth.signInWithOtp({
+        email,
+        options:{
+          shouldCreateUser:false,
+          emailRedirectTo:new URL('admin.html',window.location.href).href
+        }
+      });
+      if(error)throw error;
+      status.textContent='If this is a registered administrator email, a one-time sign-in link will arrive shortly. Check your inbox and junk folder.';
+    }catch(error){
+      status.textContent='Could not request a sign-in link: '+error.message;
+    }finally{button.disabled=false;}
   });
   document.querySelector('#admin-refresh').addEventListener('click',refresh);
   document.querySelector('#admin-signout').addEventListener('click',signOut);
