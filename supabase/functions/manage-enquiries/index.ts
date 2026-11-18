@@ -125,6 +125,30 @@ const handleRequest = async (request) => {
     }
     if (action === 'owner-admins') { requireOwner(); return respond({ admins: await rpc('owner_list_admins') }); }
     if (action === 'owner-audit') { requireOwner(); return respond({ events: await rpc('owner_audit_log', { p_limit: 100 }) }); }
+    if (action === 'owner-list-deleted') {
+      requireOwner();
+      return respond({ records: await rpc('owner_list_deleted_enquiries') });
+    }
+    if (action === 'owner-delete-records' || action === 'owner-restore-records') {
+      requireOwner();
+      // Owner role in the API is only a first check. The SQL functions
+      // independently verify the JWT's AAL2 assurance and owner membership.
+      const ids = input.ids;
+      if (!Array.isArray(ids) || ids.length < 1 || ids.length > 100 ||
+          ids.some(value => typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) ||
+          new Set(ids.map(value => value.toLowerCase())).size !== ids.length)
+        return respond({ error: 'Select 1–100 unique enquiry records.' }, 400);
+      const verb = action === 'owner-delete-records' ? 'DELETE' : 'RESTORE';
+      if (input.confirmation !== verb + ' ' + ids.length)
+        return respond({ error: 'Type ' + verb + ' ' + ids.length + ' to confirm.' }, 400);
+      if (action === 'owner-delete-records') {
+        const reason = String(input.reason || '').trim();
+        if (reason.length < 10 || reason.length > 500)
+          return respond({ error: 'Enter a deletion reason (10–500 characters).' }, 400);
+        return respond({ result: await rpc('owner_archive_enquiries', { p_ids: ids, p_reason: reason }) });
+      }
+      return respond({ result: await rpc('owner_restore_enquiries', { p_ids: ids }) });
+    }
     if (action === 'owner-set-admin') {
       requireOwner();
       const target = String(input.userId || ''), role = String(input.role || '');
