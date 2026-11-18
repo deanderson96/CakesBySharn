@@ -1,24 +1,12 @@
 <!doctype html>
 <html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#08b7bb"><link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=DM+Serif+Display&family=Dancing+Script:wght@600&display=swap" rel="stylesheet"><title>Enquiries & Orders | Cakes by Sharn</title>
-<link rel="stylesheet" href="styles.css?v=20261118ownerdelete1"><script defer src="order-config.js?v=1"></script><script defer src="admin.js?v=20261118ownerdelete1"></script></head>
+<link rel="stylesheet" href="styles.css?v=20261118ownerdelete1"><script defer src="order-config.js?v=1"></script><script defer src="admin.js?v=20261118password1"></script></head>
 <body class="admin-page">
 <div class="announcement"><span class="announcement-sparkle" aria-hidden="true">✳</span> Cakes by Sharn · Private operations <span class="announcement-sparkle" aria-hidden="true">✳</span></div><header class="admin-topbar"><div class="container admin-topbar-inner"><a class="brand" href="index.html" aria-label="Cakes by Sharn homepage"><img src="assets/cakes-by-sharn-logo.jpg" alt="" width="54" height="54"><span class="brand-text">Cakes by <strong>Sharn</strong></span></a><span class="admin-private-label">Enquiries &amp; Orders · Private workspace</span></div></header>
 <main class="container admin-shell">
 <div class="admin-page-heading"><div><p class="eyebrow">Operations dashboard</p><h1>Enquiries <em>&</em> Orders</h1><p class="admin-muted">Review customer requests, agree the details and manage every order in one place.</p></div><div id="admin-session-actions" hidden><button id="admin-refresh" class="button button-outline" type="button">↻ Refresh</button> <button id="admin-signout" class="button button-outline" type="button">Sign out</button></div></div>
-<section id="admin-login" class="admin-login-card"><h2>Welcome back</h2><p class="admin-muted">Sign in with your own administrator account.</p><form id="login-form"><label>Email address<input id="admin-email" type="email" autocomplete="username" required></label><label>Password<input id="admin-password" type="password" autocomplete="current-password" required></label><button class="button button-primary" type="submit">Sign in securely</button></form></section>
-<section id="admin-mfa" class="admin-login-card" hidden aria-labelledby="admin-mfa-title">
-<h2 id="admin-mfa-title">Secure administrator sign-in</h2>
-<p id="admin-mfa-instructions" class="admin-muted">Verify your identity with your authenticator app.</p>
-<div id="admin-mfa-enrol" hidden>
-<p class="admin-muted">Scan this QR code with an authenticator app, or enter the setup key manually. Your dashboard remains locked until MFA is verified.</p>
-<img id="admin-mfa-qr" alt="Authenticator app setup QR code" width="180" height="180" hidden>
-<p><strong>Manual setup key:</strong> <code id="admin-mfa-secret"></code></p>
-</div>
-<form id="admin-mfa-form"><label for="admin-mfa-code">Six-digit authenticator code</label>
-<input id="admin-mfa-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required>
-<button id="admin-mfa-verify" type="submit" class="button button-primary">Verify and continue</button></form>
-<button id="admin-mfa-signout" type="button" class="button button-outline">Use a different account</button></section>
+<section id="admin-login" class="admin-login-card"><h2>Welcome back</h2><p class="admin-muted">Sign in with the email address and password of an approved administrator.</p><form id="login-form"><label>Email address<input id="admin-email" type="email" autocomplete="username" required></label><label>Password<input id="admin-password" type="password" autocomplete="current-password" required></label><button class="button button-primary" type="submit">Sign in securely</button></form></section>
 <section id="admin-dashboard" hidden>
 <div id="admin-email-health" class="admin-email-warning" role="alert" hidden>
   <strong>Customer emails are not configured.</strong>
