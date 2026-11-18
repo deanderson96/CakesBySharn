@@ -20,7 +20,12 @@ export function createClient() {
       loggedIn = true;
       return {error:null};
     },
-    signOut: async () => {loggedIn=false;return {error:null};}
+    signOut: async () => {loggedIn=false;return {error:null};},
+    signInWithOtp: async ({email,options}) => {
+      if (options?.shouldCreateUser !== false || !options?.emailRedirectTo?.endsWith('/admin.html'))
+        return {error:{message:'Invalid magic-link options'}};
+      return {error:null};
+    }
     // Deliberately no auth.mfa property. Calling MFA APIs must fail this test.
   }};
 }
@@ -60,15 +65,22 @@ def test():
                         expect(page.locator("#admin-login")).to_be_visible()
                         expect(page.locator("#admin-dashboard")).to_be_hidden()
                         assert page.locator("#admin-mfa").count()==0
+                        expect(page.locator("#admin-magic-link")).to_be_visible()
+                        page.locator("#admin-magic-email").fill("owner@example.invalid")
+                        page.get_by_role("button",name="Email me a sign-in link").click()
+                        expect(page.locator("#admin-status")).to_contain_text("one-time sign-in link")
+                        expect(page.locator("#admin-dashboard")).to_be_hidden()
                         page.locator("#admin-email").fill("owner@example.invalid")
                         page.locator("#admin-password").fill("test-only-password")
                         page.get_by_role("button",name="Sign in securely").click()
                         if permitted:
                             expect(page.locator("#admin-dashboard")).to_be_visible()
                             expect(page.locator("#admin-login")).to_be_hidden()
+                            expect(page.locator("#admin-magic-link")).to_be_hidden()
                             expect(page.locator(".admin-record-summary")).to_have_count(1)
                             page.locator("#admin-signout").click()
                             expect(page.locator("#admin-login")).to_be_visible()
+                            expect(page.locator("#admin-magic-link")).to_be_visible()
                             expect(page.locator("#admin-dashboard")).to_be_hidden()
                         else:
                             expect(page.locator("#admin-login")).to_be_visible()
@@ -76,7 +88,7 @@ def test():
                             expect(page.locator("#admin-status")).to_contain_text("Not authorised")
                         assert not failures,(engine,permitted,failures)
                         page.close()
-                    print(f"PASS {engine}: password login without MFA; invalid admin denied")
+                    print(f"PASS {engine}: password and magic-link paths without MFA; invalid admin denied")
                 finally:
                     browser.close()
     finally:
