@@ -28,7 +28,7 @@ Open `http://localhost:8000/`. Supabase connectivity requires the configured pro
 - **Database schema:** **`supabase/migrations/`**, recovered verbatim from the linked Supabase project's 20 existing migrations. The root `supabase/schema.sql` is a **legacy snapshot**, not an upgrade script.
 - **Edge functions:** `supabase/functions/`, with common helpers in `_shared/`.
 - **Config:** `order-config.js` is public and must contain no secrets.
-- **Supabase auth / user roles:** The database validates the signed-in admin identity, confirmed email and active membership; owner-only actions require the `owner` role. The former MFA gate was removed at the owner's request; use strong unique passwords.
+- **Supabase auth / user roles:** The database validates the signed-in admin identity, confirmed email and active membership; owner-only actions require the `owner` role. Dean (`owner`) and Sharn (`operator`) both have active, verified, password-enabled Supabase Auth accounts. Both can use email/password or a one-time email magic link. Magic links use `signInWithOtp({ options: { shouldCreateUser: false, emailRedirectTo: 'https://www.cakesbysharn.co.uk/admin.html' } })` to prevent self-registration. Supabase Auth must allow this redirect URL under Authentication → URL Configuration; the Email provider and magic-link email template must be enabled and an SMTP sender configured for reliable delivery. The former MFA gate was removed at the owner's request; use strong unique passwords and protect email inboxes.
 
 ## Checks
 
