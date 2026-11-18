@@ -55,6 +55,16 @@ status, body = post('manage-enquiries', b'{"action":"list"}', {'Authorization': 
 assert status in (401, 403), f'Unverified admin JWT accepted or unexpected error: {status} {body[:250]!r}'
 print(f'PASS rejected unverified admin JWT: {status}', flush=True)
 
+# Owner-only deletion must never be callable with a forged/absent admin JWT.
+# These calls are deliberately unauthorised: no real record can be modified.
+for action in ('owner-delete-records', 'owner-restore-records', 'owner-list-deleted'):
+    payload = {'action': action, 'ids': ['11111111-1111-4111-8111-111111111111'],
+               'confirmation': 'DELETE 1', 'reason': 'Unauthorised negative check'}
+    status, body = post('manage-enquiries', json.dumps(payload).encode(), {'Authorization': 'Bearer invalid'})
+    assert status in (401, 403), f'{action} allowed without valid admin MFA: {status} {body[:200]!r}'
+    print(f'PASS rejected unverified owner deletion request ({action}): {status}', flush=True)
+
+
 # CORS must match the public custom domain, even on error responses.
 # Browser preflight failures appear as "Failed to fetch" and prevent any POST.
 for site_origin in ('https://www.cakesbysharn.co.uk', 'https://cakesbysharn.co.uk'):
