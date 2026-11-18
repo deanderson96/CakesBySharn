@@ -11,6 +11,10 @@ assert "user.email_confirmed_at" in backend
 assert ".eq('active', true)" in backend
 assert "requireOwner();" in backend
 assert "auth.signInWithPassword" in admin
+assert "auth.signInWithOtp" in admin
+assert "shouldCreateUser:false" in admin
+assert "emailRedirectTo:new URL('admin.html',window.location.href).href" in admin
+assert 'id="admin-magic-link"' in html
 assert "auth.mfa" not in admin and "mfaFactorId" not in admin
 assert "id=\"admin-mfa\"" not in html
 assert "Administrator access unavailable:" in admin
