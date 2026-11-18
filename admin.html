@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#08b7bb"><link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=DM+Serif+Display&family=Dancing+Script:wght@600&display=swap" rel="stylesheet"><title>Enquiries & Orders | Cakes by Sharn</title>
-<link rel="stylesheet" href="styles.css?v=20261118enterprise1"><script defer src="order-config.js?v=1"></script><script defer src="admin.js?v=20261118enterprise1"></script></head>
+<link rel="stylesheet" href="styles.css?v=20261118modal1"><script defer src="order-config.js?v=1"></script><script defer src="admin.js?v=20261118modal1"></script></head>
 <body class="admin-page">
 <div class="announcement"><span class="announcement-sparkle" aria-hidden="true">✳</span> Cakes by Sharn · Private operations <span class="announcement-sparkle" aria-hidden="true">✳</span></div><header class="admin-topbar"><div class="container admin-topbar-inner"><a class="brand" href="index.html" aria-label="Cakes by Sharn homepage"><img src="assets/cakes-by-sharn-logo.jpg" alt="" width="54" height="54"><span class="brand-text">Cakes by <strong>Sharn</strong></span></a><span class="admin-private-label"><span class="admin-private-dot" aria-hidden="true"></span> Private operations workspace</span></div></header>
 <main class="container admin-shell">
@@ -53,4 +53,12 @@
 <div class="admin-list-head" aria-hidden="true"><span>Customer / reference</span><span>Requested</span><span>Contact</span><span>Estimate</span><span>Status</span><span></span></div><div id="admin-orders" class="admin-records"></div><p id="admin-empty" class="admin-empty" hidden>No enquiries match your search.</p></div>
 <div id="admin-pagination" class="admin-pagination" hidden><button id="admin-prev-page" class="button button-outline" type="button">Previous</button><span id="admin-page-label"></span><button id="admin-next-page" class="button button-outline" type="button">Next</button></div>
 </section>
-<p id="admin-status" class="admin-live-status" role="status" aria-live="polite"></p></main></body></html>
+<p id="admin-status" class="admin-live-status" role="status" aria-live="polite"></p></main>
+<dialog id="admin-record-dialog" class="admin-record-dialog" aria-labelledby="admin-record-dialog-title">
+  <div class="admin-dialog-header">
+    <div><p class="eyebrow">Enquiry / Order details</p><h2 id="admin-record-dialog-title"></h2></div>
+    <button id="admin-record-dialog-close" class="admin-dialog-close" type="button" aria-label="Close order details">✕ <span>Close</span></button>
+  </div>
+  <div id="admin-record-dialog-content" class="admin-dialog-content"></div>
+</dialog>
+</body></html>
