@@ -15,10 +15,6 @@ FAKE_SUPABASE_MODULE = """
 export function createClient() {
   return {
     auth: {
-      mfa: {
-        getAuthenticatorAssuranceLevel: async () => ({data:{currentLevel:'aal2',nextLevel:'aal2'},error:null}),
-        listFactors: async () => ({data:{totp:[]},error:null})
-      },
       getSession: async () => ({data: {session: {access_token: 'test-token'}}}),
       signInWithPassword: async () => ({error: null}),
       signOut: async () => ({error: null}),
@@ -157,7 +153,7 @@ def test():
                     assert page.locator(".admin-record-summary").count() > 0, {
                         "page_errors": errors,
                         "status": page.locator("#admin-status").inner_text(),
-                        "mfa_visible": page.locator("#admin-mfa").is_visible(),
+                        "login_visible": page.locator("#admin-login").is_visible(),
                         "dashboard_visible": page.locator("#admin-dashboard").is_visible(),
                     }
                     assert not errors, ("unexpected JavaScript errors", engine, errors)
