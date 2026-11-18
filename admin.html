@@ -7,6 +7,11 @@
 <main class="container admin-shell">
 <div class="admin-page-heading"><div><p class="eyebrow">Operations dashboard</p><h1>Enquiries <em>&</em> Orders</h1><p class="admin-muted">Review customer requests, agree the details and manage every order in one place.</p></div><div id="admin-session-actions" hidden><button id="admin-refresh" class="button button-outline" type="button">↻ Refresh</button> <button id="admin-signout" class="button button-outline" type="button">Sign out</button></div></div>
 <section id="admin-login" class="admin-login-card"><h2>Welcome back</h2><p class="admin-muted">Sign in with the email address and password of an approved administrator.</p><form id="login-form"><label>Email address<input id="admin-email" type="email" autocomplete="username" required></label><label>Password<input id="admin-password" type="password" autocomplete="current-password" required></label><button class="button button-primary" type="submit">Sign in securely</button></form></section>
+<section id="admin-magic-link" class="admin-login-card">
+<h2>Sign in with an email link</h2>
+<p class="admin-muted">Dean and Sharn can request a one-time sign-in link sent to their registered administrator email address. No password or authenticator app is needed.</p>
+<form id="admin-magic-link-form"><label>Email address<input id="admin-magic-email" type="email" autocomplete="email" required></label><button class="button button-outline" type="submit">Email me a sign-in link</button></form>
+</section>
 <section id="admin-dashboard" hidden>
 <div id="admin-email-health" class="admin-email-warning" role="alert" hidden>
   <strong>Customer emails are not configured.</strong>
