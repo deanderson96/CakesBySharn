@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#08b7bb"><link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=DM+Serif+Display&family=Dancing+Script:wght@600&display=swap" rel="stylesheet"><title>Enquiries & Orders | Cakes by Sharn</title>
-<link rel="stylesheet" href="styles.css?v=20261117readiness1"><script defer src="order-config.js?v=1"></script><script defer src="admin.js?v=20261117readiness1"></script></head>
+<link rel="stylesheet" href="styles.css?v=20261118ownerdelete1"><script defer src="order-config.js?v=1"></script><script defer src="admin.js?v=20261118ownerdelete1"></script></head>
 <body class="admin-page">
 <div class="announcement"><span class="announcement-sparkle" aria-hidden="true">✳</span> Cakes by Sharn · Private operations <span class="announcement-sparkle" aria-hidden="true">✳</span></div><header class="admin-topbar"><div class="container admin-topbar-inner"><a class="brand" href="index.html" aria-label="Cakes by Sharn homepage"><img src="assets/cakes-by-sharn-logo.jpg" alt="" width="54" height="54"><span class="brand-text">Cakes by <strong>Sharn</strong></span></a><span class="admin-private-label">Enquiries &amp; Orders · Private workspace</span></div></header>
 <main class="container admin-shell">
@@ -46,7 +46,18 @@
 </section>
 <section id="admin-owner-panel" class="admin-owner-panel" hidden aria-labelledby="admin-owner-title"><div class="admin-analytics-heading"><div><p class="eyebrow">Owner controls</p><h2 id="admin-owner-title">Security &amp; administration</h2><p class="admin-muted">Dean-only: manage administrator privileges and review the audit trail.</p></div><button id="admin-owner-refresh" class="button button-outline" type="button">Refresh security overview</button></div><div id="admin-user-list"></div><h3>Recent administrative changes</h3><div id="admin-audit-list"></div></section>
 <div class="admin-metrics" id="admin-metrics" aria-label="Current enquiry overview"></div>
-<div class="admin-list-card"><div class="admin-list-toolbar"><div><h2>Customer enquiries</h2><p class="admin-muted" id="admin-list-caption">Choose an enquiry to review its details and actions.</p></div><div class="admin-list-controls"><label for="admin-search" class="sr-only">Search enquiries</label><input id="admin-search" type="search" placeholder="Search name or reference" autocomplete="off"><label for="admin-filter" class="sr-only">Filter by status</label><select id="admin-filter"><option value="all">All statuses</option><option value="pending">Pending</option><option value="confirmed">Approved</option><option value="declined">Declined</option></select></div></div><div class="admin-list-head" aria-hidden="true"><span>Customer / reference</span><span>Requested</span><span>Contact</span><span>Estimate</span><span>Status</span><span></span></div><div id="admin-orders" class="admin-records"></div><p id="admin-empty" class="admin-empty" hidden>No enquiries match your search.</p></div>
+<div class="admin-list-card"><div class="admin-list-toolbar"><div><h2>Customer enquiries</h2><p class="admin-muted" id="admin-list-caption">Choose an enquiry to review its details and actions.</p></div><div class="admin-list-controls"><label for="admin-search" class="sr-only">Search enquiries</label><input id="admin-search" type="search" placeholder="Search name or reference" autocomplete="off"><label for="admin-filter" class="sr-only">Filter by status</label><select id="admin-filter"><option value="all">All statuses</option><option value="pending">Pending</option><option value="confirmed">Approved</option><option value="declined">Declined</option></select></div></div><div id="admin-owner-delete-tools" class="admin-owner-delete-tools" hidden>
+  <label class="admin-owner-select-all"><input id="admin-select-page" type="checkbox"> Select all on this page</label>
+  <span id="admin-selected-count" aria-live="polite">0 selected</span>
+  <button id="admin-delete-selected" class="button button-outline admin-danger-button" type="button" disabled>Delete selected</button>
+  <button id="admin-show-deleted" class="button button-outline" type="button" aria-expanded="false">Deleted records / Restore</button>
+</div>
+<section id="admin-deleted-panel" class="admin-deleted-panel" hidden aria-labelledby="admin-deleted-title">
+  <h3 id="admin-deleted-title">Deleted enquiries and linked orders</h3>
+  <p class="admin-muted">Dean only. Deleted records disappear from the active Orders screen but are retained securely for recovery, accounting and audit. No customer emails are sent when records are deleted or restored.</p>
+  <div id="admin-deleted-list" role="list"></div>
+</section>
+<div class="admin-list-head" aria-hidden="true"><span>Customer / reference</span><span>Requested</span><span>Contact</span><span>Estimate</span><span>Status</span><span></span></div><div id="admin-orders" class="admin-records"></div><p id="admin-empty" class="admin-empty" hidden>No enquiries match your search.</p></div>
 <div id="admin-pagination" class="admin-pagination" hidden><button id="admin-prev-page" class="button button-outline" type="button">Previous</button><span id="admin-page-label"></span><button id="admin-next-page" class="button button-outline" type="button">Next</button></div>
 </section>
 <p id="admin-status" class="admin-live-status" role="status" aria-live="polite"></p></main></body></html>
