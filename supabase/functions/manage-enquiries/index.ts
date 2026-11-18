@@ -179,9 +179,13 @@ const handleRequest = async (request) => {
     if (action === 'retry-decision-email') {
       const { data: previous, error } = await service().from('customer_email_notifications')
         .select('status').eq('enquiry_id', id).in('kind', ['approved','declined']).maybeSingle();
-      if (error || !previous || previous.status !== 'failed')
-        return respond({ error: 'Only failed decision emails can be retried.' }, 409);
-      return respond({ notification: await notifyDecision(id, true) });
+      if (error) throw error;
+      if (previous && previous.status !== 'failed')
+        return respond({ error: 'Decision email is already queued or sent.' }, 409);
+      // A completed decision can have no audit row when an earlier pre-send
+      // database permission failure prevented notification creation.
+      // notifyDecision independently verifies that the decision exists.
+      return respond({ notification: await notifyDecision(id, previous?.status === 'failed') });
     }
     if (action === 'confirm' || action === 'decline') {
       const date = String(input.confirmedDate || ''), time = String(input.confirmedTime || '');
