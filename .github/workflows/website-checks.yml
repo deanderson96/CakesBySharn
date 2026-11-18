@@ -45,6 +45,10 @@ jobs:
         run: python tests/test_acknowledgment_retry.py
       - name: Validate production readiness source contracts
         run: python tests/production_readiness.py
+      - name: Validate owner-only deletion safeguards
+        run: python tests/test_owner_deletion_contracts.py
+      - name: Check Dean-only delete and restore UI with mocked records
+        run: python tests/owner_bulk_delete_ui.py
       - name: Run responsive browser checks
         run: python tests/smoke.py
       - name: Check admin email draft formatting

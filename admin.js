@@ -182,6 +182,115 @@
   let pageOffset=0,matchingTotal=0;
   let pageCounts={pending:0,confirmed:0,declined:0};
   const pageSize=25;
+  // Selection persists across paginated pages, but never across sign-outs.
+  const selectedForDeletion = new Map();
+  const deleteTools = document.querySelector('#admin-owner-delete-tools');
+  const selectPage = document.querySelector('#admin-select-page');
+  const selectedCount = document.querySelector('#admin-selected-count');
+  const deleteSelectedButton = document.querySelector('#admin-delete-selected');
+  const showDeletedButton = document.querySelector('#admin-show-deleted');
+  const deletedPanel = document.querySelector('#admin-deleted-panel');
+  const deletedList = document.querySelector('#admin-deleted-list');
+
+  function updateDeleteSelection() {
+    const owner = adminRole === 'owner';
+    deleteTools.hidden = !owner;
+    if (!owner) selectedForDeletion.clear();
+    selectedCount.textContent = selectedForDeletion.size + ' selected across pages';
+    deleteSelectedButton.disabled = !owner || selectedForDeletion.size === 0 || selectedForDeletion.size > 100;
+    const countOnPage = records.filter(enquiry => selectedForDeletion.has(enquiry.id)).length;
+    selectPage.checked = owner && records.length > 0 && countOnPage === records.length;
+    selectPage.indeterminate = owner && countOnPage > 0 && countOnPage < records.length;
+    selectPage.disabled = !owner || !records.length;
+    if (!owner) { deletedPanel.hidden=true; showDeletedButton.setAttribute('aria-expanded','false'); }
+  }
+
+  async function deleteRecords(items) {
+    if (adminRole !== 'owner' || !items.length || items.length > 100) return;
+    const count = items.length;
+    const examples = items.slice(0, 4).map(item => item.reference).join(', ');
+    const confirmation = 'DELETE ' + count;
+    const typed = window.prompt(
+      'DEAN-ONLY DELETE: Remove ' + count + ' enquiry record(s) and their linked orders from the active screen?\n' +
+      'Examples: ' + examples + (count > 4 ? ', ...' : '') + '\n' +
+      'Records and financial history will be retained securely and can be restored.\n' +
+      'Type ' + confirmation + ' to continue.'
+    );
+    if (typed === null) return;
+    if (typed.trim() !== confirmation) {
+      status.textContent='Deletion cancelled: confirmation text did not match.';
+      return;
+    }
+    const reason = window.prompt('Reason for deletion (10–500 characters; recorded in the owner audit log):');
+    if (reason === null) return;
+    if (reason.trim().length < 10 || reason.trim().length > 500) {
+      status.textContent='Deletion cancelled: enter a reason of 10–500 characters.';
+      return;
+    }
+    if (!window.confirm('Final confirmation: remove ' + count +
+      ' enquiry(s) and linked orders from the active screen? This does not erase accounting or audit records.')) return;
+    deleteSelectedButton.disabled=true;
+    status.textContent='Removing selected records from active Orders…';
+    try {
+      const result = await api({ action:'owner-delete-records', ids:items.map(item=>item.id),
+        confirmation, reason:reason.trim() });
+      selectedForDeletion.clear();
+      if (pageOffset >= matchingTotal - count) pageOffset = Math.max(0,pageOffset-pageSize);
+      await refresh();
+      if (!deletedPanel.hidden) await loadDeletedRecords();
+      status.textContent='Deleted from active Orders: ' + result.result.deleted_enquiries +
+        ' enquiry(s), ' + result.result.deleted_orders + ' linked order(s). Records are recoverable.';
+    } catch (error) {
+      status.textContent='Deletion failed; no partial batch should be applied: ' + error.message;
+      updateDeleteSelection();
+    }
+  }
+
+  async function loadDeletedRecords() {
+    if (adminRole !== 'owner') return;
+    deletedList.replaceChildren(el('p','admin-muted','Loading deleted records…'));
+    try {
+      const result = await api({action:'owner-list-deleted'});
+      deletedList.replaceChildren();
+      const archived = result.records || [];
+      if (!archived.length) {
+        deletedList.append(el('p','admin-muted','No deleted enquiries or orders.'));
+        return;
+      }
+      archived.forEach(enquiry => {
+        const line = el('div','admin-deleted-row');
+        line.setAttribute('role','listitem');
+        const identity = el('div','admin-deleted-identity');
+        identity.append(el('strong','',enquiry.reference),
+          el('span','',enquiry.customer_name + ' · ' + (enquiry.order_reference || 'No linked order')),
+          el('small','', 'Deleted ' + new Date(enquiry.deleted_at).toLocaleString('en-GB')));
+        const restore = el('button','button button-outline','Restore');
+        restore.type='button';
+        restore.addEventListener('click',async () => {
+          if (adminRole !== 'owner') return;
+          const code = window.prompt('Restore ' + enquiry.reference +
+            ' and any linked order? Type RESTORE 1 to confirm:');
+          if (code === null) return;
+          if (code.trim() !== 'RESTORE 1') {
+            status.textContent='Restore cancelled: confirmation text did not match.';
+            return;
+          }
+          restore.disabled=true;
+          try {
+            await api({action:'owner-restore-records',ids:[enquiry.id],confirmation:'RESTORE 1'});
+            await refresh();
+            await loadDeletedRecords();
+            status.textContent='Restored ' + enquiry.reference + ' to active Orders.';
+          } catch (error) { status.textContent='Restore failed: ' + error.message; restore.disabled=false; }
+        });
+        line.append(identity,restore);
+        deletedList.append(line);
+      });
+    } catch(error) {
+      deletedList.replaceChildren(el('p','admin-muted','Unable to load deleted records: '+error.message));
+    }
+  }
+
   function el(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -251,7 +360,26 @@
     const state = el('span', 'admin-state admin-state-' + enquiry.status, statusLabel(enquiry.status));
     const summaryEstimate = estimatePrices(enquiry.items || []);
     const estimateBadge = el('span', 'admin-record-estimate', money(summaryEstimate.total) + (summaryEstimate.unpriced ? ' + quote' : summaryEstimate.from ? ' from' : ' est.'));
-    summary.append(customer, requested, contact, estimateBadge, state, el('span', 'admin-record-chevron', '⌄'));
+    if (adminRole === 'owner') {
+      const cell = el('span','admin-record-customer-cell');
+      const selection = document.createElement('input');
+      selection.type='checkbox';
+      selection.className='admin-record-delete-check';
+      selection.setAttribute('aria-label','Select enquiry ' + enquiry.reference + ' and its linked order for deletion');
+      selection.checked=selectedForDeletion.has(enquiry.id);
+      selection.addEventListener('click',event=>event.stopPropagation());
+      selection.addEventListener('change',() => {
+        if (selection.checked) selectedForDeletion.set(enquiry.id, {
+          id:enquiry.id,reference:enquiry.reference,orderReference:order?.order_reference||null
+        });
+        else selectedForDeletion.delete(enquiry.id);
+        updateDeleteSelection();
+      });
+      cell.append(selection,customer);
+      summary.append(cell, requested, contact, estimateBadge, state, el('span', 'admin-record-chevron', '⌄'));
+    } else {
+      summary.append(customer, requested, contact, estimateBadge, state, el('span', 'admin-record-chevron', '⌄'));
+    }
     details.append(summary);
     const panel = el('div', 'admin-record-panel');
     const info = el('div', 'admin-detail-grid');
@@ -567,12 +695,25 @@
       });
       panel.append(retry);
     }
+    if (adminRole === 'owner') {
+      const destructive = el('div','admin-owner-single-delete');
+      const remove = el('button','button button-outline admin-danger-button',
+        order ? 'Delete enquiry and linked order' : 'Delete enquiry');
+      remove.type='button';
+      remove.addEventListener('click',() => deleteRecords([{
+        id:enquiry.id,reference:enquiry.reference,orderReference:order?.order_reference||null
+      }]));
+      destructive.append(remove,el('p','admin-muted',
+        'Dean only. Removes this record from active Orders; retains all accounting and audit history. Restorable.'));
+      panel.append(destructive);
+    }
     details.append(panel);
     return details;
   }
   function renderRecords(){
     orders.replaceChildren();
     records.forEach(enquiry=>orders.append(renderRecord(enquiry)));
+    updateDeleteSelection();
     empty.hidden=records.length>0;
     document.querySelector('#admin-list-caption').textContent=matchingTotal+
       ' matching enquiries · Select a row for details and actions';
@@ -697,6 +838,24 @@
     }catch(error){auditList.replaceChildren(el('p','admin-muted','Security overview unavailable: '+error.message));}
   }
   document.querySelector('#admin-owner-refresh').addEventListener('click',refreshOwner);
+  selectPage.addEventListener('change',() => {
+    if (adminRole !== 'owner') return;
+    records.forEach(enquiry => {
+      if (selectPage.checked) selectedForDeletion.set(enquiry.id, {
+        id:enquiry.id,reference:enquiry.reference,orderReference:orderMap.get(enquiry.id)?.order_reference||null
+      });
+      else selectedForDeletion.delete(enquiry.id);
+    });
+    // Re-render checkboxes so the visible page matches the selection state.
+    renderRecords();
+  });
+  deleteSelectedButton.addEventListener('click',() => deleteRecords([...selectedForDeletion.values()]));
+  showDeletedButton.addEventListener('click',async () => {
+    if (adminRole !== 'owner') return;
+    deletedPanel.hidden = !deletedPanel.hidden;
+    showDeletedButton.setAttribute('aria-expanded',String(!deletedPanel.hidden));
+    if (!deletedPanel.hidden) await loadDeletedRecords();
+  });
   async function refresh() {
     status.textContent='Loading enquiries…';
     try {
@@ -808,7 +967,8 @@
   async function signOut(){
     await client.auth.signOut();
     dashboard.hidden=true;mfaSection.hidden=true;sessionActions.hidden=true;login.hidden=false;
-    orders.replaceChildren();mfaFactorId=null;
+    orders.replaceChildren();selectedForDeletion.clear();deleteTools.hidden=true;deletedPanel.hidden=true;
+    mfaFactorId=null;
     status.textContent='Signed out.';
   }
   document.querySelector('#login-form').addEventListener('submit',async event=>{
