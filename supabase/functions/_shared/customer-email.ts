@@ -72,7 +72,7 @@ export async function sendCustomerEmail(to: string, details: EmailDetails, idemp
     headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json',
       'Idempotency-Key': idempotencyKey },
     body: JSON.stringify({
-      from: 'Cakes by Sharn <no-reply@cakesbysharn.co.uk>',
+      from: 'Cakes by Sharn <hello@cakesbysharn.co.uk>',
       reply_to: 'cakesbysharnx@hotmail.com',
       to: [to], subject: email.subject, html: email.html, text: email.text
     })
