@@ -12,11 +12,9 @@ const handleRequest = async (request) => {
     const authClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
     const { data: { user }, error: identityError } = await authClient.auth.getUser(jwt);
     if (identityError || !user?.id || !user.email_confirmed_at) return respond({ error: 'Not authorised' }, 403);
-    const { data: assurance, error: assuranceError } = await authClient.auth.mfa.getAuthenticatorAssuranceLevel(jwt);
-    if (assuranceError || assurance?.currentLevel !== 'aal2') return respond({ error: 'Multi-factor authentication required' }, 403);
 
     // Every database query runs with the verified caller's JWT; RLS and RPCs
-    // independently check active administrator membership and AAL2.
+    // independently check active, verified administrator membership and owner role.
     const database = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: bearer } }
     });
@@ -39,7 +37,7 @@ const handleRequest = async (request) => {
     const requireOwner = () => {
       if (administrator.role !== 'owner') throw new Error('Owner permissions required');
     };
-    // Service-role client is used only after verifying user identity, AAL2 and
+    // Service-role client is used only after verifying user identity, email confirmation and
     // active administrator membership; it is never exposed to the browser.
     const service = () => createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     const notifyDecision = async (enquiryId: string, retry = false) => {
@@ -79,7 +77,7 @@ const handleRequest = async (request) => {
       const data = await rpc('admin_paginated_enquiries', {
         p_offset: offset, p_limit: limit, p_status: selected, p_search: search
       });
-      // Only after JWT, AAL2 and active admin checks. Report configuration
+      // Only after JWT, verified email and active admin checks. Report configuration
       // presence only; never expose API keys or connection secrets.
       return respond({ ...data, administrator: administrator.display_name, adminRole: administrator.role,
         emailSecretConfigured: Boolean(Deno.env.get('RESEND_API_KEY')?.trim()) });
@@ -132,7 +130,7 @@ const handleRequest = async (request) => {
     if (action === 'owner-delete-records' || action === 'owner-restore-records') {
       requireOwner();
       // Owner role in the API is only a first check. The SQL functions
-      // independently verify the JWT's AAL2 assurance and owner membership.
+      // independently verify active, verified admin and owner membership.
       const ids = input.ids;
       if (!Array.isArray(ids) || ids.length < 1 || ids.length > 100 ||
           ids.some(value => typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) ||
@@ -159,7 +157,7 @@ const handleRequest = async (request) => {
       }) });
     }
     if (!/^[0-9a-f-]{36}$/i.test(id)) return respond({ error: 'Invalid enquiry or order reference' }, 400);
-    // MFA-protected backfill for acknowledgments that failed before the
+    // Admin-authorised backfill for acknowledgments that failed before the
     // service-role audit permissions were corrected. Never re-send if already
     // sent or currently in progress; uniqueness is also enforced in the DB.
     if (action === 'retry-acknowledgment-email') {

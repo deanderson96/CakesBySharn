@@ -3,8 +3,8 @@
 ## Component model
 - GitHub Pages delivers public static assets and the admin client.
 - `submit-enquiry` is intentionally public. It independently validates products, quantity, customer contact information and UK dates. It checks hashed-contact rate limits and inserts an enquiry via server-only credentials.
-- `manage-enquiries` requires a valid Supabase Auth JWT, confirmed identity, AAL2 MFA and active membership in `public.admin_accounts`. It passes the caller JWT to PostgreSQL; administrative business mutations occur via RPCs.
-- Business RPCs use database-side `assert_admin_mfa()`, and owner-only RPCs additionally verify the `owner` role.
+- `manage-enquiries` requires a valid Supabase Auth JWT, confirmed email and active membership in `public.admin_accounts`. It passes the caller JWT to PostgreSQL; administrative business mutations occur via RPCs.
+- Business RPCs use database-side `assert_admin_mfa()` (a legacy function name now enforcing verified, active admin access without an MFA step); owner-only RPCs additionally verify the `owner` role.
 - RLS is enabled on exposed `public` tables. Private `accounting` and `audit` schemas do not grant schema usage or table SELECT to browser roles.
 
 ## Data life cycle
@@ -21,9 +21,9 @@
 |---|---|
 | Anonymous | Public submission only; no customer or financial reads |
 | Signed-in non-admin | Denied access to enquiries and all admin RPCs |
-| Active admin, AAL1 | Denied until MFA completes |
-| Active operator, AAL2 | Permitted operational actions; denied owner-only controls |
-| Active owner, AAL2 | Permitted owner operations |
+| Active verified operator, password login (AAL1) | Permitted operational actions; denied owner-only controls |
+| Active verified owner, password login (AAL1) | Permitted owner operations; deletion remains owner-only |
+| Unconfirmed-email account | Denied even if listed as an administrator |
 | Disabled admin | Denied despite a valid JWT |
 | Malformed public request | 400/413 without inserting records |
 
@@ -31,7 +31,7 @@ Test these against a disposable/staging database rather than modifying productio
 
 ## Current security findings
 
-Supabase flags 15 authenticated-callable SECURITY DEFINER RPCs. Those APIs are intentional and currently call `assert_admin_mfa()`; do not revoke them indiscriminately or replace the guard without equivalent checks. Keep privilege assertions under test. RLS no-policy notices for internal rate-limit and maintenance tables are intentional (deny-by-default). Leaked-password protection is currently disabled and needs enabling in the Supabase dashboard. Accounting foreign-key indexes were added in migration 20261117213141; remaining performance findings include RLS initplan warnings.
+Supabase flags authenticated-callable SECURITY DEFINER RPCs. Those APIs are intentional and call `assert_admin_mfa()` (legacy name, now an active+verified admin guard); keep database-side role assertions and EXECUTE privileges under test. Disabling mandatory MFA reduces resilience to credential theft. Keep privilege assertions under test. RLS no-policy notices for internal rate-limit and maintenance tables are intentional (deny-by-default). Leaked-password protection is currently disabled and needs enabling in the Supabase dashboard. Accounting foreign-key indexes were added in migration 20261117213141; remaining performance findings include RLS initplan warnings.
 
 ## Known improvement targets
 

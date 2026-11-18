@@ -6,12 +6,12 @@
 - [ ] Review customer-facing wording, menu prices and allergens
 - [ ] Review changes against the latest applied Supabase migration
 - [ ] Verify no secrets, contact information or production customer records committed
-- [ ] Verify operator, owner, AAL1, ordinary user and anonymous authorization tests in staging
+- [ ] Verify active owner/operator password login, unconfirmed-email, disabled-admin, ordinary-user and anonymous authorization tests in staging
 
 ## Database
 - [ ] Back up production before DDL changes
 - [ ] Verify any new migration is present in source control and not already applied
-- [ ] Inspect RLS and EXECUTE grants; do not expose privileged functions without an MFA/role guard
+- [ ] Inspect RLS and EXECUTE grants; do not expose privileged functions without confirmed-email, active-admin and owner-role guards
 - [ ] Run Supabase security and performance advisors; document intentional exceptions
 - [ ] Verify scheduled job remains active and business records are preserved
 
@@ -20,7 +20,8 @@
 - [ ] Keep `submit-enquiry` public and `manage-enquiries` JWT-protected
 - [ ] Verify public submission size/date/catalogue rejection paths in staging
 - [ ] Deploy static website from reviewed `main`
-- [ ] Smoke-test mobile browser, admin MFA login, order approval and reporting
+- [ ] Smoke-test Dean and Sharn email/password login, one-time email magic-link login and signout, owner-only deletion, order approval and reporting
+- [ ] Under Supabase Authentication → URL Configuration, allow `https://www.cakesbysharn.co.uk/admin.html` as a redirect URL; confirm Magic Link email template and SMTP deliverability
 - [ ] Confirm actual acknowledgement behaviour; do not imply automated email if unavailable
 
 ## Follow-up
